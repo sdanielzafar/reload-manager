@@ -12,7 +12,7 @@ class DatabricksRuntimeClient(GenericDatabaseClient):
     def _query(self, sql: str, headers: bool = False) -> list:
         df = spark.sql(sql)
         rows = df.collect()
-        return [r.asDict() for r in rows] if headers else rows
+        return [r.asDict() if headers else tuple([*r]) for r in rows]
 
     # — extra helper: trigger job —
     def trigger_job(self, job_id: int, params: dict[str, str] | None = None) -> int:
