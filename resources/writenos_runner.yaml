@@ -20,6 +20,7 @@ resources:
             - whl: ../dist/*.whl
       queue:
         enabled: true
+      max_concurrent_runs: ${var.writenos_threads}
       parameters:
         - name: source_table
           default: ""

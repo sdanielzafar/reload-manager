@@ -4,6 +4,17 @@ bundle:
 include:
   - resources/*.yaml
 
+variables:
+  writenos_threads:
+    description: The number of concurrent WriteNOS threads allowed
+    default: 2
+  jdbc_threads:
+    description: The number of concurrent JDBC threads allowed
+    default: 5
+  teradata_tz:
+    description: The number of concurrent JDBC threads allowed
+    default: 5
+
 targets:
   dev:
     mode: development
