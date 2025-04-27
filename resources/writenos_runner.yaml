@@ -1,0 +1,29 @@
+resources:
+  jobs:
+    WriteNOS_Runner:
+      name: WriteNOS-Runner
+      tasks:
+        - task_key: run
+          python_wheel_task:
+            package_name: reloadmanager
+            entry_point: reloadmanager
+            parameters:
+              - reload-table
+              - --source-table
+              - "{{job.parameters.source_table}}"
+              - --target-table
+              - "{{job.parameters.target_table}}"
+              - --where-clause
+              - "{{job.parameters.where_clause}}"
+          existing_cluster_id: 0416-180448-i5l71jnf
+          libraries:
+            - whl: ../dist/*.whl
+      queue:
+        enabled: true
+      parameters:
+        - name: source_table
+          default: ""
+        - name: target_table
+          default: ""
+        - name: where_clause
+          default: ""
