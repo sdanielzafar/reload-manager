@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reloadmanager"
+version = "0.2.0"
+description = "Reload Tables from Teradata to Databricks"
+authors = [
+  { name="Dan Zafar", email="dan.zafar@databricks.com" }
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "jaydebeapi>=1.2.3",
+  "teradatasql"
+]
+
+[project.scripts]
+reloadmanager = "reloadmanager.cli.main:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
