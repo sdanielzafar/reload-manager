@@ -1,0 +1,22 @@
+resources:
+  jobs:
+    Enqueuer:
+      name: Enqueuer
+      tasks:
+        - task_key: Enqueue
+          notebook_task:
+            notebook_path: ../src/enqueuer.py
+          existing_cluster_id: 0416-180448-i5l71jnf
+          libraries:
+            - whl: ../dist/*.whl
+      queue:
+        enabled: true
+      parameters:
+        - name: catalog
+          default: ""
+        - name: queue_schema
+          default: ""
+        - name: starting_watermark
+          default: ""
+        - name: reset_queue
+          default: "false"
