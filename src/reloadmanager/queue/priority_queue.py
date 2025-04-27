@@ -8,16 +8,16 @@ from reloadmanager.mixins.logging_mixin import LoggingMixin
 
 
 class PriorityQueue(LoggingMixin):
-    def __init__(self, queue_schema: str, catalog: str, client: GenericDatabaseClient = None):
+    def __init__(self, queue_schema: str, catalog: str = str | None, client: GenericDatabaseClient = None):
         self.schema: str = queue_schema
-        self.catalog: str = catalog
         self.client: GenericDatabaseClient = client if client else get_dbx_client()
-        self.queue_tbl: str = f"`{self.catalog}`.{self.schema}.QUEUE"
-        self.queue_hist_tbl: str = f"`{self.catalog}`.{self.schema}.QUEUE_HISTORY"
+        self.catalog_schema: str = (f"`{catalog}`." if catalog else "") + self.schema
+        self.queue_tbl: str = f"`{self.catalog_schema}.QUEUE"
+        self.queue_hist_tbl: str = f"`{self.catalog_schema}.QUEUE_HISTORY"
 
     def create(self):
 
-        self.client.query(f"CREATE SCHEMA IF NOT EXISTS {self.catalog}.{self.schema}")
+        self.client.query(f"CREATE SCHEMA IF NOT EXISTS {self.catalog_schema}")
 
         self.client.query(
             f"""
