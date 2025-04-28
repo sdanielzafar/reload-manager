@@ -6,16 +6,14 @@ resources:
         - task_key: Enqueue
           notebook_task:
             notebook_path: ../src/enqueuer.py
-          existing_cluster_id: 0416-180448-i5l71jnf
+          existing_cluster_id: ${var.cluster_id}
           libraries:
             - whl: ../dist/*.whl
-      queue:
-        enabled: true
       parameters:
         - name: catalog
-          default: ""
+          default: ${var.catalog}
         - name: queue_schema
-          default: ""
+          default: ${var.queue_schema}
         - name: starting_watermark
           default: "{{job.trigger.time.timestamp_ms}}"
         - name: reset_queue

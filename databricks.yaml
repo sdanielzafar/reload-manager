@@ -14,9 +14,15 @@ variables:
   teradata_tz:
     description: The number of concurrent JDBC threads allowed
     default: 5
+  queue_schema:
+    description: The schema to put the queue and queue history in
+    default: reloadmanager
 
 targets:
   dev:
+    variables:
+      catalog: 1234-567890-abcde123
+      cluster_id: 0416-180448-i5l71jnf
     mode: development
     default: true
     workspace:

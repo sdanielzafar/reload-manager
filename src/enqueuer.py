@@ -16,6 +16,7 @@ from reloadmanager.utils.event_time import EventTime
 from reloadmanager.mixins.logging_mixin import LoggingMixin
 
 logs = LoggingMixin()
+logs.set_logger_level("info")
 EventTime.set_timezone("America/Phoenix")
 
 
@@ -88,9 +89,10 @@ def query_tracking_table(watermark: EventTime, td_client: TeradataClient = td_cl
 def get_table_metadata(tables: set[str]):
     if not tables:
         return set()
+    tbl_vals: str = "','".join(tables)
     table_info: list[tuple] = dbx_client.query(
         f"SELECT * FROM {demographic_table} "
-        f"WHERE source_table IN ({','.join(tables)})"
+        f"WHERE source_table IN ('{tbl_vals}')"
     )
     return {(r := TableAttrRecord(*line)).source_table: r for line in table_info}
 

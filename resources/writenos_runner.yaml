@@ -15,7 +15,7 @@ resources:
               - "{{job.parameters.target_table}}"
               - --where-clause
               - "{{job.parameters.where_clause}}"
-          existing_cluster_id: 0416-180448-i5l71jnf
+          existing_cluster_id: ${var.cluster_id}
           libraries:
             - whl: ../dist/*.whl
       queue:
