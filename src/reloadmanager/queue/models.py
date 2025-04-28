@@ -3,12 +3,6 @@ from dataclasses import dataclass, fields
 from reloadmanager.utils.event_time import EventTime
 
 
-@dataclass(frozen=True)
-class TrackerRecord:
-    source_table: str
-    event_time: EventTime
-
-
 @dataclass()
 class QueueRecord:
     source_table: str

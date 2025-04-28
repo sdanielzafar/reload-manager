@@ -75,10 +75,11 @@ class PriorityQueue(LoggingMixin):
             WHERE status = 'R'
         """)
 
-        values = ",".join(f"('{t}', '{et}')" for t, et in rows)
-        self.client.query(f"""
-            DELETE FROM {self.queue_hist_tbl}
-            WHERE (source_table, event_time) IN ({values})
+        if rows:
+            values = ",".join(f"('{t}', '{et}')" for t, et in rows)
+            self.client.query(f"""
+                DELETE FROM {self.queue_hist_tbl}
+                WHERE (source_table, event_time) IN ({values})
         """)
 
     def poll(self, strategy: str) -> tuple:

@@ -1,10 +1,16 @@
 # Databricks notebook source
-from dataclasses import replace
+# MAGIC %md
+# MAGIC # Enqueuer Job
+# MAGIC The enqueuer job will query Teradata's tracking table and put tables into the queue to be processed
+
+# COMMAND ----------
+
+from dataclasses import dataclass, replace
 import time
 
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
 from reloadmanager.clients.teradata_client import TeradataClient
-from reloadmanager.queue.models import TrackerRecord, QueueRecord, TableAttrRecord
+from reloadmanager.queue.models import QueueRecord, TableAttrRecord
 from reloadmanager.queue.priority_queue import PriorityQueue
 from reloadmanager.utils.event_time import EventTime
 from reloadmanager.mixins.logging_mixin import LoggingMixin
@@ -12,12 +18,9 @@ from reloadmanager.mixins.logging_mixin import LoggingMixin
 logs = LoggingMixin()
 EventTime.set_timezone("America/Phoenix")
 
-"""
-The enqueuer reads from Teradata and puts tables into the queue
-"""
-
 
 # COMMAND ----------
+
 # set parameters
 dbutils.widgets.text("catalog", "")
 dbutils.widgets.text("queue_schema", "reloadmanager")
@@ -32,6 +35,7 @@ reset_queue: bool = {"true": True, "false": False}[reset_queue_str.strip().lower
 
 
 # COMMAND ----------
+
 # set up things we need
 demographic_table: str = "reloadmanager.tr_tables_writenos"
 td_client: TeradataClient = TeradataClient()
@@ -40,6 +44,7 @@ queue: PriorityQueue = PriorityQueue(queue_schema, catalog)
 
 
 # COMMAND ----------
+
 def init_watermark(_watermark: EventTime) -> EventTime:
     """
     If there are things in the queue or queue history then the starting watermark is the latest timestamp from those
@@ -57,6 +62,13 @@ def init_watermark(_watermark: EventTime) -> EventTime:
 
 
 # COMMAND ----------
+
+@dataclass(frozen=True)
+class TrackerRecord:
+    source_table: str
+    event_time: EventTime
+
+
 def query_tracking_table(watermark: EventTime, td_client: TeradataClient = td_client) -> list[TrackerRecord]:
     td_query: str = f"""
         SELECT 
@@ -71,7 +83,8 @@ def query_tracking_table(watermark: EventTime, td_client: TeradataClient = td_cl
     return [TrackerRecord(tbl, EventTime(ts)) for tbl, ts in rows]
 
 
-# COMMAND ---------
+# COMMAND ----------
+
 def get_table_metadata(tables: set[str]):
     if not tables:
         return set()
@@ -82,7 +95,8 @@ def get_table_metadata(tables: set[str]):
     return {(r := TableAttrRecord(*line)).source_table: r for line in table_info}
 
 
-# COMMAND ---------
+# COMMAND ----------
+
 def set_priority(load_time: str, min_staleness: int, max_staleness: int) -> int:
     staleness: int = int(time.time()) - EventTime(load_time)
     if staleness < min_staleness:
@@ -117,7 +131,8 @@ def set_priority(load_time: str, min_staleness: int, max_staleness: int) -> int:
                 return 25
 
 
-# COMMAND ---------
+# COMMAND ----------
+
 def update_priority(queued_tables: list[QueueRecord], new_tables: list[TrackerRecord]) -> list[QueueRecord]:
     tables: set[str] = {r.source_table for r in new_tables} | {q.source_table for q in queued_tables}
     tbl_metadata: dict[str, TableAttrRecord] = get_table_metadata(tables)
@@ -155,7 +170,8 @@ def update_priority(queued_tables: list[QueueRecord], new_tables: list[TrackerRe
     ]
 
 
-# COMMAND ---------
+# COMMAND ----------
+
 logs.logger.info(f"Initializing..")
 queue.create()
 if reset_queue:
@@ -165,6 +181,8 @@ else:
     queue.requeue_running()
 
 watermark: EventTime = init_watermark(starting_watermark)
+
+# COMMAND ----------
 
 while True:
     # grab tables from the Teradata tracking table
