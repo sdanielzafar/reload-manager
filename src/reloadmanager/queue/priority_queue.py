@@ -12,8 +12,8 @@ class PriorityQueue(LoggingMixin):
         self.schema: str = queue_schema
         self.client: GenericDatabaseClient = client if client else get_dbx_client()
         self.catalog_schema: str = (f"`{catalog}`." if catalog else "") + self.schema
-        self.queue_tbl: str = f"`{self.catalog_schema}.QUEUE"
-        self.queue_hist_tbl: str = f"`{self.catalog_schema}.QUEUE_HISTORY"
+        self.queue_tbl: str = f"{self.catalog_schema}.QUEUE"
+        self.queue_hist_tbl: str = f"{self.catalog_schema}.QUEUE_HISTORY"
 
     def create(self):
 
