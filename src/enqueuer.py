@@ -73,6 +73,8 @@ def query_tracking_table(watermark: EventTime, td_client: TeradataClient = td_cl
 
 # COMMAND ---------
 def get_table_metadata(tables: set[str]):
+    if not tables:
+        return set()
     table_info: list[tuple] = dbx_client.query(
         f"SELECT * FROM {demographic_table} "
         f"WHERE source_table IN ({','.join(tables)})"
