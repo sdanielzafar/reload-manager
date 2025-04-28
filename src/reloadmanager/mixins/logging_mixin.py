@@ -2,18 +2,26 @@ import logging
 
 
 class LoggingMixin:
+
+    added_logger = False
     _fmt = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
 
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
+    @property
+    def logger(self):
+        logger = logging.getLogger(__name__)
 
-        stream_handler = logging.StreamHandler()
-        stream_handler.setLevel(logging.INFO)
-        stream_handler.setFormatter(self._fmt)
-        self.logger.addHandler(stream_handler)
+        if not type(self).added_logger:
+            handler = logging.StreamHandler()
+            handler.setFormatter(type(self)._fmt)
+            logger.addHandler(handler)
+            type(self).added_logger = True
 
-    def set_logger_level(self, lvl: str):
-        level = getattr(logging, lvl.upper(), None)
+        logger.propagate = False
+        return logger
+
+    def set_logger_level(self, log_level):
+        level = getattr(logging, log_level.upper(), None)
         if not isinstance(level, int):
-            raise ValueError(f"Invalid log level: {lvl}")
+            raise ValueError(f"Invalid log level: {log_level}")
+
         self.logger.setLevel(level)
