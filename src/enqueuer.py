@@ -19,10 +19,10 @@ The enqueuer reads from Teradata and puts tables into the queue
 
 # COMMAND ----------
 # set parameters
-dbutils.widgets.text("catalog", None)
+dbutils.widgets.text("catalog", "")
 dbutils.widgets.text("queue_schema", "reloadmanager")
 dbutils.widgets.text("starting_watermark", str(EventTime.now()))
-dbutils.widgets.b("reset_queue", "False")
+dbutils.widgets.text("reset_queue", "False")
 
 catalog: str = dbutils.widgets.get("catalog")
 queue_schema: str = dbutils.widgets.get("queue_schema")
