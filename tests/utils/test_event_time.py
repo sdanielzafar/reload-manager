@@ -57,6 +57,14 @@ def test_event_time_eq():
     assert et1 == et2
 
 
+def test_event_time_malformat():
+    with pytest.raises(ValueError) as exc_info:
+        EventTime("2025-03-18T05:26:55Z")
+
+    # flex on the error message contents
+    assert "'2025-03-18T05:26:55Z' is not '%Y-%m-%d %H:%M:%S'" in str(exc_info.value)
+
+
 def test_event_time_lt_gt():
     et1 = EventTime("2025-03-18 05:26:55")
     et2 = EventTime("2025-03-18 05:26:56")
