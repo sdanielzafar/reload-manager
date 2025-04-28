@@ -10,7 +10,7 @@ from reloadmanager.utils.event_time import EventTime
 from reloadmanager.mixins.logging_mixin import LoggingMixin
 
 logs = LoggingMixin()
-EventTime.set_timezone("Arizona/Phoenix")
+EventTime.set_timezone("America/Phoenix")
 
 """
 The enqueuer reads from Teradata and puts tables into the queue
@@ -26,7 +26,7 @@ dbutils.widgets.b("reset_queue", "False")
 
 catalog: str = dbutils.widgets.get("catalog")
 queue_schema: str = dbutils.widgets.get("queue_schema")
-starting_watermark: str = int(dbutils.widgets.get("starting_watermark")[:-3])
+starting_watermark: EventTime = EventTime(int(dbutils.widgets.get("starting_watermark")[:-3]))
 reset_queue_str: str = dbutils.widgets.get("reset_queue")
 reset_queue: bool = {"true": True, "false": False}[reset_queue_str.strip().lower()]
 
@@ -40,7 +40,7 @@ queue: PriorityQueue = PriorityQueue(queue_schema, catalog)
 
 
 # COMMAND ----------
-def init_watermark(watermark_str: str) -> EventTime:
+def init_watermark(_watermark: EventTime) -> EventTime:
     """
     If there are things in the queue or queue history then the starting watermark is the latest timestamp from those
     If these are empty then we use the starting timestamp.
@@ -52,8 +52,8 @@ def init_watermark(watermark_str: str) -> EventTime:
         logs.logger.info(f"Determined watermark from the queue: {last_load_time}.")
         return EventTime(last_load_time)
     else:
-        logs.logger.info(f"Using starting watermark: {watermark_str}.")
-        return EventTime(watermark_str)
+        logs.logger.info(f"Using starting watermark: {str(_watermark)}.")
+        return _watermark
 
 
 # COMMAND ----------
