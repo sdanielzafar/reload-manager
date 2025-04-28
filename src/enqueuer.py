@@ -21,12 +21,12 @@ The enqueuer reads from Teradata and puts tables into the queue
 # set parameters
 dbutils.widgets.text("catalog", "")
 dbutils.widgets.text("queue_schema", "reloadmanager")
-dbutils.widgets.text("starting_watermark", str(EventTime.now()))
+dbutils.widgets.text("starting_watermark", "")
 dbutils.widgets.text("reset_queue", "False")
 
 catalog: str = dbutils.widgets.get("catalog")
 queue_schema: str = dbutils.widgets.get("queue_schema")
-starting_watermark: EventTime = EventTime(int(dbutils.widgets.get("starting_watermark")[:-3]))
+starting_watermark: EventTime = EventTime.from_epoch(int(dbutils.widgets.get("starting_watermark")[:-3]))
 reset_queue_str: str = dbutils.widgets.get("reset_queue")
 reset_queue: bool = {"true": True, "false": False}[reset_queue_str.strip().lower()]
 
