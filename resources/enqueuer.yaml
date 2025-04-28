@@ -17,6 +17,6 @@ resources:
         - name: queue_schema
           default: ""
         - name: starting_watermark
-          default: ""
+          default: "{{job.trigger.time.timestamp_ms}}"
         - name: reset_queue
           default: "false"
