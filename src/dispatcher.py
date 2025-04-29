@@ -143,3 +143,9 @@ thread_pool: dict[str, list[LoaderThread]] = {
     "JDBC": create_workers("JDBC", jdbc_threads),
     "WriteNOS": create_workers("WriteNOS", writenos_threads)
 }
+
+# COMMAND ----------
+
+# let the session hang until all threads complete
+for thread in thread_pool["JDBC"] + thread_pool["WriteNOS"]:
+    thread.join()
