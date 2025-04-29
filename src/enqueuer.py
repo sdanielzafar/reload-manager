@@ -81,7 +81,7 @@ def query_tracking_table(watermark: EventTime, td_client: TeradataClient = td_cl
     """
     logs.logger.debug(f"Teradata query: {td_query}")
     rows: list[tuple] = td_client.query(td_query, max_attempts=200)
-    return [TrackerRecord(tbl, EventTime.from_datetime(ts)) for tbl, ts in rows]
+    return [TrackerRecord(tbl, EventTime.from_datetime_local(ts)) for tbl, ts in rows]
 
 
 # COMMAND ----------
