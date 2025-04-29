@@ -12,8 +12,8 @@ variables:
     description: The number of concurrent JDBC threads allowed
     default: 5
   teradata_tz:
-    description: The number of concurrent JDBC threads allowed
-    default: 5
+    description: The timezone for Teradata
+    default: America/Phoenix
   queue_schema:
     description: The schema to put the queue and queue history in
     default: reloadmanager

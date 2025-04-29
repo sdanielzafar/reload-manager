@@ -1,0 +1,22 @@
+resources:
+  jobs:
+    ReloadDispatcher:
+      name: ReloadDispatcher
+      tasks:
+        - task_key: Dispatch
+          notebook_task:
+            notebook_path: ../src/dispatcher.py
+          existing_cluster_id: ${var.cluster_id}
+          libraries:
+            - whl: ../dist/*.whl
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: queue_schema
+          default: ${var.queue_schema}
+        - name: writenos_threads
+          default: ${var.writenos_threads}
+        - name: jdbc_threads
+          default: ${var.jdbc_threads}
+        - name: source_tz
+          default: ${var.teradata_tz}
