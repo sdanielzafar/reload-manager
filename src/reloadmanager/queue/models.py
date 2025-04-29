@@ -65,3 +65,34 @@ class TableAttrRecord:
     priority: int
     min_staleness: int
     max_staleness: int
+
+    @classmethod
+    def from_tuple(cls, line: tuple):
+        if len(line) != len(fields(cls)):
+            raise ValueError(f"Input line {line} should have {len(fields(cls))} fields")
+
+        source_table, target_table, strategy, disabled, priority, min_staleness, max_staleness = line
+
+        def valid_table(s: str) -> str | None:
+            if s:
+                if len(s.split(".")) != 2:
+                    raise ValueError(f"Table '{s}' must have 2 namespaces in the input config file")
+                return s
+            return None
+
+        if strategy not in ["TPT", "WriteNOS", "JDBC"]:
+            raise ValueError(f"Input line: {line} has invalid method. Should be 'TPT', 'WriteNOS', or 'JDBC'")
+
+        if disabled.strip().lower() not in ["true", "false"]:
+            raise ValueError(f"Input line: {line} has invalid disabled status. Should be 'true' or 'false'")
+        disabled = disabled.strip().lower() == "true"
+
+        return cls(
+            valid_table(source_table),
+            valid_table(target_table or source_table),
+            strategy,
+            disabled,
+            int(priority),
+            int(min_staleness or 0),
+            int(max_staleness)
+        )

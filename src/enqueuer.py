@@ -81,12 +81,12 @@ def query_tracking_table(watermark: EventTime, td_client: TeradataClient = td_cl
     """
     logs.logger.debug(f"Teradata query: {td_query}")
     rows: list[tuple] = td_client.query(td_query, max_attempts=200)
-    return [TrackerRecord(tbl, EventTime(ts)) for tbl, ts in rows]
+    return [TrackerRecord(tbl, EventTime.from_datetime(ts)) for tbl, ts in rows]
 
 
 # COMMAND ----------
 
-def get_table_metadata(tables: set[str]):
+def get_table_metadata(tables: set[str]) -> dict[str, TableAttrRecord]:
     if not tables:
         return set()
     tbl_vals: str = "','".join(tables)
@@ -94,7 +94,7 @@ def get_table_metadata(tables: set[str]):
         f"SELECT * FROM {demographic_table} "
         f"WHERE source_table IN ('{tbl_vals}')"
     )
-    return {(r := TableAttrRecord(*line)).source_table: r for line in table_info}
+    return {(r := TableAttrRecord.from_tuple(*line)).source_table: r for line in table_info}
 
 
 # COMMAND ----------
