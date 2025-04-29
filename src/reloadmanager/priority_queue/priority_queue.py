@@ -24,6 +24,7 @@ class PriorityQueue(LoggingMixin):
             CREATE TABLE IF NOT EXISTS {self.queue_tbl} (
                 source_table STRING PRIMARY KEY,
                 target_table STRING,
+                where_clause STRING,
                 event_time STRING,
                 trigger_time STRING,
                 strategy STRING,
@@ -40,6 +41,7 @@ class PriorityQueue(LoggingMixin):
             CREATE TABLE IF NOT EXISTS {self.queue_hist_tbl} (
                     source_table STRING,
                     target_table STRING,
+                    where_clause STRING,
                     status STRING,
                     event_time STRING,
                     trigger_time STRING,
@@ -95,7 +97,7 @@ class PriorityQueue(LoggingMixin):
             AND strategy = '{strategy}'
             AND priority > 0
         )
-        SELECT source_table, target_table, event_time, strategy, lock_rows, priority
+        SELECT source_table, target_table, where_clause, event_time, strategy, lock_rows, priority
         FROM ranked
         WHERE rn = 1
         """)
@@ -103,7 +105,7 @@ class PriorityQueue(LoggingMixin):
         if not row:
             return ()
 
-        source_table, target_table, event_time, strategy, lock_rows, priority = row[0]
+        source_table, target_table, where_clause, event_time, strategy, lock_rows, priority = row[0]
 
         # Mark it as running and update trigger_time
         self.client.query(f"""
@@ -125,9 +127,9 @@ class PriorityQueue(LoggingMixin):
             # Insert as RUNNING if it doesn't exist
             self.client.query(f"""
                 INSERT INTO {self.queue_hist_tbl} (
-                    source_table, target_table, status, event_time, trigger_time, strategy, lock_rows, priority
+                    source_table, target_table, where_clause, status, event_time, trigger_time, strategy, lock_rows, priority
                 ) VALUES (
-                    '{source_table}', '{target_table}', 'RUNNING', '{event_time}', '{str(now)}',
+                    '{source_table}', '{target_table}', '{where_clause}', 'RUNNING', '{event_time}', '{str(now)}',
                     '{strategy}', {lock_rows}, {priority}
                 )
             """)

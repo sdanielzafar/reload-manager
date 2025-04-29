@@ -5,6 +5,7 @@ from dataclasses import dataclass, fields
 class QueueRecord:
     source_table: str
     target_table: str
+    where_clause: str
     event_time: str
     trigger_time: str | None
     strategy: str
@@ -36,6 +37,7 @@ class QueueRecord:
         f = (
             self.source_table,
             self.target_table,
+            self.where_clause,
             self.event_time,
             self.trigger_time,
             self.strategy,
@@ -47,7 +49,7 @@ class QueueRecord:
         return f[index]
 
     def __len__(self):
-        return 9
+        return 10
 
     def __iter__(self):
         # re-use the existing tuple to avoid dup logic

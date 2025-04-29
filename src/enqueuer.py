@@ -94,7 +94,7 @@ def get_table_metadata(tables: set[str]) -> dict[str, TableAttrRecord]:
         f"SELECT * FROM {demographic_table} "
         f"WHERE source_table IN ('{tbl_vals}')"
     )
-    return {(r := TableAttrRecord.from_tuple(*line)).source_table: r for line in table_info}
+    return {(r := TableAttrRecord.from_tuple(line)).source_table: r for line in table_info}
 
 
 # COMMAND ----------
@@ -144,6 +144,7 @@ def update_priority(queued_tables: list[QueueRecord], new_tables: list[TrackerRe
         QueueRecord(
             record.source_table,
             f"{catalog}.{(attrs := tbl_metadata[record.source_table]).target_table}",
+            "",
             str(record.event_time),
             None,
             attrs.strategy,
