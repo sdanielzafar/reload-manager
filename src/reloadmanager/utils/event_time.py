@@ -102,7 +102,7 @@ class EventTime(int):
         return datetime.fromtimestamp(int(self), tz or self._default_tz)
 
     def __str__(self) -> str:              # str(et)
-        return self.to_datetime().strftime(_FMT)
+        return datetime.fromtimestamp(int(self), tz=type(self)._default_tz).strftime("%Y-%m-%d %H:%M:%S")
 
     def __repr__(self) -> str:             # inspect(et)
         return f"EventTime('{self}')"
