@@ -17,18 +17,29 @@ variables:
   queue_schema:
     description: The schema to put the queue and queue history in
     default: reloadmanager
+  catalog:
+    default: 1dp_migration_dev_catalog_3573379518104516
+  cluster_id:
+    default: 0416-180448-i5l71jnf
 
 targets:
   dev:
     variables:
-      catalog: 1234-567890-abcde123
-      cluster_id: 0416-180448-i5l71jnf
+      catalog:
+        default: 1dp_migration_dev_catalog_3573379518104516
+      cluster_id:
+        default: 0416-180448-i5l71jnf
     mode: development
     default: true
     workspace:
       host: https://dbc-7c9eb967-788d.cloud.databricks.com
 
   prod:
+    variables:
+      catalog:
+        default: 1dp_migration_dev_catalog_3573379518104516
+      cluster_id:
+        default: 0416-180448-i5l71jnf
     mode: production
     workspace:
       host: https://company.databricks.com
