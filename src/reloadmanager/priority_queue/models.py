@@ -67,7 +67,8 @@ class TableAttrRecord:
     max_staleness: int
 
     @classmethod
-    def from_tuple(cls, line: tuple):
+    def from_tuple(cls, *args):
+        line: tuple = tuple(args)
         if len(line) != len(fields(cls)):
             raise ValueError(f"Input line {line} should have {len(fields(cls))} fields")
 
