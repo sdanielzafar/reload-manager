@@ -22,6 +22,23 @@ def test_event_time_str_roundtrip():
     assert str(et) == ts
 
 
+def test_event_time_str_roundtrip_rev():
+    epoch = 1745790930
+    et = EventTime.from_epoch(epoch)
+    assert str(et) == "2025-04-27 14:55:30"
+
+
+def test_input_str():
+    et = EventTime("2025-04-29 07:44:25")
+    assert f'{et}' == "2025-04-29 07:44:25"
+
+
+def test_from_dt():
+    dt = datetime(2025, 4, 29, 7, 44, 25)
+    et = EventTime.from_datetime(dt)
+    assert f'{et}' == "2025-04-29 07:44:25"
+
+
 def test_event_time_to_datetime():
     ts = "2025-03-18 05:26:55"
     et = EventTime(ts)

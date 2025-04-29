@@ -76,8 +76,12 @@ class EventTime(int):
         return super().__new__(cls, epoch)
 
     @classmethod
+    def from_datetime_local(cls, dt: datetime) -> "EventTime":
+        return super().__new__(cls, int(dt.replace(tzinfo=cls._default_tz).timestamp()))
+
+    @classmethod
     def from_datetime(cls, dt: datetime) -> "EventTime":
-        return super().__new__(cls, int(dt.timestamp()))
+        return super().__new__(cls, int(dt.replace(tzinfo=cls._default_tz).timestamp()))
 
     @classmethod
     def from_epoch(cls, epoch: int) -> "EventTime":
