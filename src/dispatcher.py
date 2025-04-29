@@ -1,10 +1,14 @@
+# Databricks notebook source
+# MAGIC %md
+# MAGIC # Dispatcher Job
+# MAGIC The enqueuer job will spin up multiple threads to take data from the queue and process it
+
 from datetime import datetime
 import traceback
 import time
 from threading import Thread, Event
 
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
-from reloadmanager.priority_queue.models import QueueRecord
 from reloadmanager.priority_queue.priority_queue import PriorityQueue
 from reloadmanager.table_loader.report_record import ReportRecord
 from reloadmanager.utils.event_time import EventTime
