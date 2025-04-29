@@ -3,6 +3,8 @@
 # MAGIC # Dispatcher Job
 # MAGIC The enqueuer job will spin up multiple threads to take data from the queue and process it
 
+# COMMAND ----------
+
 from datetime import datetime
 import traceback
 import time
