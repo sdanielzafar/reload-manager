@@ -1,7 +1,5 @@
 from dataclasses import dataclass, fields
 
-from reloadmanager.utils.event_time import EventTime
-
 
 @dataclass()
 class QueueRecord:

@@ -1,6 +1,6 @@
 import time
 
-from reloadmanager.queue.models import QueueRecord
+from reloadmanager.priority_queue.models import QueueRecord
 from reloadmanager.utils.event_time import EventTime
 from reloadmanager.clients.databricks_client_factory import get_dbx_client
 from reloadmanager.clients.generic_database_client import GenericDatabaseClient
