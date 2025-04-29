@@ -16,7 +16,7 @@ from reloadmanager.utils.event_time import EventTime
 from reloadmanager.mixins.logging_mixin import LoggingMixin
 
 logs = LoggingMixin()
-logs.set_logger_level("info")
+logs.set_logger_level("debug")
 EventTime.set_timezone("America/Phoenix")
 
 
