@@ -154,7 +154,7 @@ class PriorityQueue(LoggingMixin):
 
         values_sql = ",\n  ".join(row.to_sql_values() for row in tables)
 
-        self.client.query(f"""
+        sql: str = f"""
             WITH src ({QueueRecord.fields_str()}) AS (
               VALUES {values_sql}
             )
@@ -169,7 +169,11 @@ class PriorityQueue(LoggingMixin):
             
             WHEN NOT MATCHED THEN
               INSERT *
-        """)
+        """
+
+        self.logger.debug(f"Upsert query:\n{sql}")
+
+        self.client.query(sql)
 
     @property
     def in_queue(self) -> list[QueueRecord]:
