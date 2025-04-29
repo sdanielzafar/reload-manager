@@ -135,7 +135,12 @@ def set_priority(load_time: str, min_staleness: int, max_staleness: int) -> int:
 
 # COMMAND ----------
 
-def update_priority(queued_tables: list[QueueRecord], new_tables: list[TrackerRecord]) -> list[QueueRecord]:
+def update_priority(
+        queued_tables:
+        list[QueueRecord],
+        new_tables: list[TrackerRecord]
+) -> tuple[list[QueueRecord], list[QueueRecord]]:
+
     tables: set[str] = {r.source_table for r in new_tables} | {q.source_table for q in queued_tables}
     tbl_metadata: dict[str, TableAttrRecord] = get_table_metadata(tables)
 
@@ -160,17 +165,20 @@ def update_priority(queued_tables: list[QueueRecord], new_tables: list[TrackerRe
     logs.logger.info(f"Found {len(new_tables_queue)} tables to enqueue.")
     logs.logger.debug(f"{str(new_tables_queue)}")
 
-    # update priorities for all, sorry this is ugly
-    return [
-        replace(
-            t,
-            priority=set_priority(
-                t.event_time,
-                (attrs := tbl_metadata[t.source_table]).min_staleness,
-                attrs.max_staleness
-            ) * attrs.priority
-        ) for t in queued_tables + new_tables_queue
-    ]
+    # update priorities, sorry this is ugly
+    def update_rows(rows: list[QueueRecord]):
+        return [
+            replace(
+                t,
+                priority=set_priority(
+                    t.event_time,
+                    (attrs := tbl_metadata[t.source_table]).min_staleness,
+                    attrs.max_staleness
+                ) * attrs.priority
+            ) for t in rows
+        ]
+
+    return update_rows(queued_tables), update_rows(new_tables_queue)
 
 
 # COMMAND ----------
@@ -196,16 +204,20 @@ while True:
     queue_tables: list[QueueRecord] = queue.in_queue
 
     # grab the table details from the flat file and update priority
-    new_tables: list[QueueRecord] = update_priority(queue_tables, updated_tables)
+    queue_tables_upd, new_tables = update_priority(queue_tables, updated_tables)
 
-    if not new_tables:
-        logs.logger.info(f"No tables in queue")
+    if not new_tables and not queue_tables_upd:
+        logs.logger.info(f"No tables")
         time.sleep(60)
         continue
 
     # put them in the queue
-    queue.upsert_queued(new_tables)
-    logs.logger.info(f"Enqueud new tables and updated priorities.")
+    if queue_tables_upd:
+        queue.upsert_queued(queue_tables_upd)
+        logs.logger.info(f"Updated priorities if existing tables")
+    if new_tables:
+        queue.upsert_queued(new_tables)
+        logs.logger.info(f"Enqueud new tables")
 
     # update watermark
     watermark = EventTime(queue.last_load_time())
