@@ -65,8 +65,7 @@ class TableAttrRecord:
     max_staleness: int
 
     @classmethod
-    def from_tuple(cls, *args):
-        line: tuple = tuple(args)
+    def from_tuple(cls, line: tuple):
         if len(line) != len(fields(cls)):
             raise ValueError(f"Input line {line} should have {len(fields(cls))} fields")
 
@@ -82,9 +81,10 @@ class TableAttrRecord:
         if strategy not in ["TPT", "WriteNOS", "JDBC"]:
             raise ValueError(f"Input line: {line} has invalid method. Should be 'TPT', 'WriteNOS', or 'JDBC'")
 
-        if disabled.strip().lower() not in ["true", "false"]:
-            raise ValueError(f"Input line: {line} has invalid disabled status. Should be 'true' or 'false'")
-        disabled = disabled.strip().lower() == "true"
+        if isinstance(disabled, str):
+            if disabled.strip().lower() not in ["true", "false"]:
+                raise ValueError(f"Input line: {line} has invalid disabled status. Should be 'true' or 'false'")
+            disabled = disabled.strip().lower() == "true"
 
         return cls(
             valid_table(source_table),

@@ -65,7 +65,20 @@ def test_queue_record_iter():
 
 def test_table_attr_record_from_tuple_success():
     rec = TableAttrRecord.from_tuple(
-        "schema.table1", "schema.table2", "TPT", "false", 1, 0, 100
+        tuple(["schema.table1", "schema.table2", "TPT", "false", 1, 0, 100])
+    )
+    assert rec.source_table == "schema.table1"
+    assert rec.target_table == "schema.table2"
+    assert rec.strategy == "TPT"
+    assert rec.disabled is False
+    assert rec.priority == 1
+    assert rec.min_staleness == 0
+    assert rec.max_staleness == 100
+
+
+def test_table_attr_record_from_tuple_success2():
+    rec = TableAttrRecord.from_tuple(
+        tuple(["schema.table1", "schema.table2", "TPT", False, 1, 0, 100])
     )
     assert rec.source_table == "schema.table1"
     assert rec.target_table == "schema.table2"
@@ -78,7 +91,7 @@ def test_table_attr_record_from_tuple_success():
 
 def test_table_attr_record_from_tuple_missing_target_table():
     rec = TableAttrRecord.from_tuple(
-        "schema.table1", "", "JDBC", "true", 5, 1, 10
+        tuple(["schema.table1", "", "JDBC", "true", 5, 1, 10])
     )
     assert rec.source_table == "schema.table1"
     assert rec.target_table == "schema.table1"  # fallback
@@ -87,28 +100,28 @@ def test_table_attr_record_from_tuple_missing_target_table():
 def test_table_attr_record_from_tuple_invalid_table_format():
     with pytest.raises(ValueError, match=r"must have 2 namespaces"):
         TableAttrRecord.from_tuple(
-            "badtable", "schema.target", "TPT", "false", 1, 0, 100
+            tuple(["badtable", "schema.target", "TPT", "false", 1, 0, 100])
         )
 
 
 def test_table_attr_record_from_tuple_invalid_strategy():
     with pytest.raises(ValueError, match=r"invalid method"):
         TableAttrRecord.from_tuple(
-            "schema.source", "schema.target", "BadMethod", "false", 1, 0, 100
+            tuple(["schema.source", "schema.target", "BadMethod", "false", 1, 0, 100])
         )
 
 
 def test_table_attr_record_from_tuple_invalid_disabled_flag():
     with pytest.raises(ValueError, match=r"invalid disabled status"):
         TableAttrRecord.from_tuple(
-            "schema.source", "schema.target", "TPT", "notabool", 1, 0, 100
+            tuple(["schema.source", "schema.target", "TPT", "notabool", 1, 0, 100])
         )
 
 
 def test_table_attr_record_from_tuple_wrong_length():
     with pytest.raises(ValueError, match=r"should have 7 fields"):
         TableAttrRecord.from_tuple(
-            "only", "five", "fields", "false", 1
+            tuple(["only", "five", "fields", "false", 1])
         )
 
 
