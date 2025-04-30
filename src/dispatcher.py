@@ -8,7 +8,7 @@
 from datetime import datetime
 import traceback
 import time
-from threading import Thread, Event
+from threading import Thread, Event, Lock
 
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
 from reloadmanager.priority_queue.priority_queue import PriorityQueue
@@ -41,6 +41,7 @@ EventTime.set_timezone(source_tz)
 dbx_client: DatabricksRuntimeClient = DatabricksRuntimeClient()
 queue: PriorityQueue = PriorityQueue(queue_schema, catalog)
 stop_signal: Event = Event()
+queue_lock: Lock = Lock()
 
 
 # COMMAND ----------
@@ -49,6 +50,7 @@ class LoaderThread(Thread, LoggingMixin):
                  thread_id: int,
                  strategy: str,
                  stop_signal: Event,
+                 queue_lock: Lock,
                  priority_queue: PriorityQueue = queue,
                  databricks_client: DatabricksRuntimeClient = DatabricksRuntimeClient):
         super().__init__()
@@ -57,6 +59,7 @@ class LoaderThread(Thread, LoggingMixin):
         self.logger.info(f"Thread {thread_id} starting...")
         self.stop_thread: bool = False
         self.stop_signal = stop_signal
+        self.queue_lock = queue_lock
         self.queue: PriorityQueue = priority_queue
         self.databricks_client: DatabricksRuntimeClient = databricks_client
 
@@ -75,7 +78,8 @@ class LoaderThread(Thread, LoggingMixin):
 
         self.wait_if_needed()
 
-        task: tuple = self.queue.poll(self.strategy)
+        with self.queue_lock:
+            task: tuple = self.queue.poll(self.strategy)
 
         if not task:
             self.logger.info(f"Thread {self.thread_id} found no queued tables. Sleeping...")
@@ -96,8 +100,9 @@ class LoaderThread(Thread, LoggingMixin):
             self.logger.error(f"CRITICAL FAILURE: Thread {self.thread_id} failed to reload '{source_table}': {e}")
             traceback.print_exc()
         finally:
-            # remove table from queue
-            self.queue.dequeue(source_table, event_time, end_time, duration, n_records, status, error)
+            with self.queue_lock:
+                # remove table from queue
+                self.queue.dequeue(source_table, event_time, end_time, duration, n_records, status, error)
 
     def run(self):
         try:
@@ -125,7 +130,7 @@ def create_workers(strategy, count) -> list[LoaderThread]:
     if count > 0:
         logs.logger.info(f"Creating {count} {strategy} threads...")
         threads = [
-            LoaderThread(i, strategy, stop_signal)
+            LoaderThread(i, strategy, stop_signal, queue_lock)
             for i in range(count)
         ]
         for thread in threads:
