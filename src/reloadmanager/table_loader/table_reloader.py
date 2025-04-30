@@ -19,7 +19,7 @@ class TableReloader(LoggingMixin):
         self.source_table: str = source_table
         self.target_table: str = target_table
         self.where_clause: str = where_clause
-        self.strategy: str = strategy
+        self.strategy: str = strategy.lower()
         self.lock_rows: bool = lock_rows
 
     @cached_property
@@ -32,7 +32,7 @@ class TableReloader(LoggingMixin):
                     where_clause=self.where_clause
                 )
             case other:
-                raise NotImplemented(f"Strategy: '{other}' has not been implemented")
+                raise NotImplementedError(f"Strategy: '{other}' has not been implemented")
 
     @cached_property
     def runner(self) -> GenericRunner:
