@@ -22,3 +22,5 @@ resources:
           default: ${var.jdbc_threads}
         - name: source_tz
           default: ${var.teradata_tz}
+        - name: log_level
+          default: info
