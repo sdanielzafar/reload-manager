@@ -16,7 +16,6 @@ from reloadmanager.utils.event_time import EventTime
 from reloadmanager.mixins.logging_mixin import LoggingMixin
 
 logs = LoggingMixin()
-logs.set_logger_level("debug")
 EventTime.set_timezone("America/Phoenix")
 
 
@@ -27,17 +26,20 @@ dbutils.widgets.text("catalog", "")
 dbutils.widgets.text("queue_schema", "reloadmanager")
 dbutils.widgets.text("starting_watermark", "")
 dbutils.widgets.text("reset_queue", "False")
+dbutils.widgets.text("log_level", "info")
 
 catalog: str = dbutils.widgets.get("catalog")
 queue_schema: str = dbutils.widgets.get("queue_schema")
 starting_watermark: EventTime = EventTime.from_epoch(int(dbutils.widgets.get("starting_watermark")[:-3]))
 reset_queue_str: str = dbutils.widgets.get("reset_queue")
 reset_queue: bool = {"true": True, "false": False}[reset_queue_str.strip().lower()]
+log_level: str = dbutils.widgets.get("log_level")
 
 
 # COMMAND ----------
 
 # set up things we need
+logs.set_logger_level(log_level)
 demographic_table: str = "reloadmanager.tr_tables_writenos"
 td_client: TeradataClient = TeradataClient()
 dbx_client: DatabricksRuntimeClient = DatabricksRuntimeClient()
