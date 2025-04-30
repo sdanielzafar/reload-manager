@@ -1,4 +1,5 @@
 from functools import cached_property
+from datetime import timedelta
 from databricks.connect import DatabricksSession
 from databricks.connect.session import SparkSession
 from delta.connect.exceptions import ConcurrentAppendException, ConcurrentWriteException
@@ -34,6 +35,9 @@ class DatabricksRuntimeClient(GenericDatabaseClient):
             except Exception:
                 raise
 
-    def trigger_job(self, job_id: int, params: dict[str, str] | None = None) -> int:
+    def trigger_job(self, job_id: int, params: dict[str, str] | None = None, get_output=False):
         run = self.ws.jobs.run_now(job_id=job_id, notebook_params=params or {})
-        return run.run_id
+        if not get_output:
+            return run.run_id
+        run_id = run.result(timeout=timedelta(minutes=60))
+        return self.ws.jobs.get_run_output(run_id.tasks[0].run_id).notebook_output.result

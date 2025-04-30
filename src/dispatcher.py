@@ -25,13 +25,17 @@ logs.set_logger_level("debug")
 # set parameters
 dbutils.widgets.text("catalog", "")
 dbutils.widgets.text("queue_schema", "reloadmanager")
+dbutils.widgets.text("writenos_jobid", "")
 dbutils.widgets.text("writenos_threads", "")
+dbutils.widgets.text("jdbc_jobid", "")
 dbutils.widgets.text("jdbc_threads", "")
 dbutils.widgets.text("source_tz", "")
 
 catalog: str = dbutils.widgets.get("catalog")
 queue_schema: str = dbutils.widgets.get("queue_schema")
+writenos_jobid: int = int(dbutils.widgets.get("writenos_jobid"))
 writenos_threads: int = int(dbutils.widgets.get("writenos_threads"))
+jdbc_jobid: int = int(dbutils.widgets.get("jdbc_jobid"))
 jdbc_threads: int = int(dbutils.widgets.get("jdbc_threads"))
 source_tz: str = dbutils.widgets.get("source_tz")
 
@@ -40,6 +44,10 @@ EventTime.set_timezone(source_tz)
 
 dbx_client: DatabricksRuntimeClient = DatabricksRuntimeClient()
 queue: PriorityQueue = PriorityQueue(queue_schema, catalog)
+job_ids: dict[str, int] = {
+    "WriteNOS": writenos_jobid,
+    "JDBC": jdbc_jobid
+}
 stop_signal: Event = Event()
 queue_lock: Lock = Lock()
 
@@ -49,6 +57,7 @@ class LoaderThread(Thread, LoggingMixin):
     def __init__(self,
                  thread_id: int,
                  strategy: str,
+                 reload_job_id: int,
                  stop_signal: Event,
                  queue_lock: Lock,
                  priority_queue: PriorityQueue = queue,
@@ -58,8 +67,9 @@ class LoaderThread(Thread, LoggingMixin):
         self.thread_id: str = f"{strategy.lower()}_{str(thread_id)}"
         self.logger.info(f"Thread {thread_id} starting...")
         self.stop_thread: bool = False
-        self.stop_signal = stop_signal
-        self.queue_lock = queue_lock
+        self.stop_signal: Event = stop_signal
+        self.queue_lock: Lock = queue_lock
+        self.reload_job_id: int = reload_job_id
         self.queue: PriorityQueue = priority_queue
         self.databricks_client: DatabricksRuntimeClient = databricks_client
 
@@ -118,19 +128,24 @@ class LoaderThread(Thread, LoggingMixin):
                 traceback.print_exc()
 
     def reload_table(self, source_table: str, target_table: str, where_clause: str, lock_rows: bool) -> ReportRecord:
-        time.sleep(15)
-        self.logger.info(f"It was super hard and it took a long time, but {self.thread_id} finished {source_table}")
-        return ReportRecord(source_table, self.strategy, "SUCCESS", 0.0, 0.9, 999, "")
+        params: dict[str, str] = {
+            "source_table": source_table,
+            "target_table": target_table,
+            "where_clause": where_clause,
+            "lock_rows": lock_rows
+        }
+        output = dbx_client.trigger_job(self.reload_job_id, params, get_output=True)
+        return exec(output)
 
 
 # COMMAND ----------
 
 # start worker threads
-def create_workers(strategy, count) -> list[LoaderThread]:
+def create_workers(strategy, count, reload_job_id) -> list[LoaderThread]:
     if count > 0:
         logs.logger.info(f"Creating {count} {strategy} threads...")
         threads = [
-            LoaderThread(i, strategy, stop_signal, queue_lock)
+            LoaderThread(i, strategy, reload_job_id, stop_signal, queue_lock)
             for i in range(count)
         ]
         for thread in threads:
@@ -145,8 +160,8 @@ def num_active_threads(_thead_pool: dict[str, list[LoaderThread]]) -> int:
 
 
 thread_pool: dict[str, list[LoaderThread]] = {
-    "JDBC": create_workers("JDBC", jdbc_threads),
-    "WriteNOS": create_workers("WriteNOS", writenos_threads)
+    "JDBC": create_workers("JDBC", jdbc_threads, job_ids["JDBC"]),
+    "WriteNOS": create_workers("WriteNOS", writenos_threads, job_ids["WriteNOS"])
 }
 
 # COMMAND ----------
