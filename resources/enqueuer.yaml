@@ -18,3 +18,5 @@ resources:
           default: "{{job.trigger.time.timestamp_ms}}"
         - name: reset_queue
           default: "false"
+        - name: log_level
+          default: "info"
