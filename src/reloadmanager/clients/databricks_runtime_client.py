@@ -36,7 +36,7 @@ class DatabricksRuntimeClient(GenericDatabaseClient):
                 raise
 
     def trigger_job(self, job_id: int, params: dict[str, str] | None = None, get_output=False):
-        run = self.ws.jobs.run_now(job_id=job_id, notebook_params=params or {})
+        run = self.ws.jobs.run_now(job_id=job_id, job_parameters=params or {})
         if not get_output:
             return run.run_id
         run_id = run.result(timeout=timedelta(minutes=60))
