@@ -1,7 +1,7 @@
 resources:
   jobs:
-    ReloadDispatcher:
-      name: ReloadDispatcher
+    LoadDispatcher:
+      name: LoadDispatcher
       tasks:
         - task_key: Dispatch
           notebook_task:
