@@ -1,6 +1,7 @@
 from functools import cached_property
 from databricks.connect import DatabricksSession
 from databricks.connect.session import SparkSession
+from delta.connect.exceptions import ConcurrentAppendException, ConcurrentWriteException
 
 from reloadmanager.clients.generic_database_client import GenericDatabaseClient
 
@@ -21,9 +22,17 @@ class DatabricksRuntimeClient(GenericDatabaseClient):
             return SparkSession.builder.getOrCreate()
 
     def _query(self, sql: str, headers: bool = False) -> list:
-        df = self.spark.sql(sql)
-        rows = df.collect()
-        return [r.asDict() if headers else tuple([*r]) for r in rows]
+        max_delta_concurrency_attempts: int = 5
+        attempt = 0
+        while attempt < max_delta_concurrency_attempts:
+            try:
+                df = self.spark.sql(sql)
+                rows = df.collect()
+                return [r.asDict() if headers else tuple([*r]) for r in rows]
+            except (ConcurrentAppendException, ConcurrentWriteException):
+                attempt += 1
+            except Exception:
+                raise
 
     def trigger_job(self, job_id: int, params: dict[str, str] | None = None) -> int:
         run = self.ws.jobs.run_now(job_id=job_id, notebook_params=params or {})
