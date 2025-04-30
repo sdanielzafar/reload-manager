@@ -9,6 +9,7 @@ from datetime import datetime
 import traceback
 import time
 from threading import Thread, Event, Lock
+from databricks.sdk.runtime import dbutils
 
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
 from reloadmanager.priority_queue.priority_queue import PriorityQueue
