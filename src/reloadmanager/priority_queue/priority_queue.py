@@ -8,7 +8,7 @@ from reloadmanager.mixins.logging_mixin import LoggingMixin
 
 
 class PriorityQueue(LoggingMixin):
-    def __init__(self, queue_schema: str, catalog: str = str | None, client: GenericDatabaseClient = None):
+    def __init__(self, queue_schema: str, catalog: str | None = None, client: GenericDatabaseClient = None):
         self.schema: str = queue_schema
         self.client: GenericDatabaseClient = client if client else get_dbx_client()
         self.catalog_schema: str = (f"`{catalog}`." if catalog else "") + self.schema
@@ -87,19 +87,12 @@ class PriorityQueue(LoggingMixin):
     def poll(self, strategy: str) -> tuple:
         now = EventTime.from_epoch(int(time.time()))
 
-        # Find the next eligible row to run
+        # Find the next eligible row to run, reference the priority VIEW defined by the user
         row: list[tuple] = self.client.query(f"""
-        WITH ranked AS (
-          SELECT *,
-                 ROW_NUMBER() OVER (ORDER BY priority DESC) as rn
-          FROM {self.queue_tbl}
-          WHERE status = 'Q'
-            AND strategy = '{strategy}'
-            AND priority > 0
-        )
         SELECT source_table, target_table, where_clause, event_time, strategy, lock_rows, priority
-        FROM ranked
-        WHERE rn = 1
+        FROM {self.catalog_schema}.priorities_v
+        WHERE rank = 1
+        AND strategy = '{strategy}'
         """)
 
         if not row:

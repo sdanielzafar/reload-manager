@@ -5,7 +5,7 @@
 
 # COMMAND ----------
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, fields
 import time
 
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
@@ -17,7 +17,6 @@ from reloadmanager.mixins.logging_mixin import LoggingMixin
 
 logs = LoggingMixin()
 EventTime.set_timezone("America/Phoenix")
-
 
 # COMMAND ----------
 
@@ -34,7 +33,6 @@ starting_watermark: EventTime = EventTime.from_epoch(int(dbutils.widgets.get("st
 reset_queue_str: str = dbutils.widgets.get("reset_queue")
 reset_queue: bool = {"true": True, "false": False}[reset_queue_str.strip().lower()]
 log_level: str = dbutils.widgets.get("log_level")
-
 
 # COMMAND ----------
 
@@ -66,6 +64,55 @@ def init_watermark(_watermark: EventTime) -> EventTime:
 
 # COMMAND ----------
 
+def define_priority_view(p_queue: PriorityQueue) -> None:
+    """
+    Define how priorities are calculated, it just needs to expose a rank column. The consumer query looks like this:
+        SELECT source_table, target_table, where_clause, event_time, strategy, lock_rows, priority
+        FROM {self.catalog_schema}.priorities_v
+        WHERE rank = 1
+        AND strategy = '{strategy}'
+
+    This is defined in Enqueuer so that all the customer-specific business logic is decoupled from the queue and
+    dispatcher
+    """
+
+    sql: str = f"""
+    CREATE OR REPLACE VIEW priorities_v AS (
+        SELECT source_table, target_table, where_clause, event_time, strategy, lock_rows, priority,
+        ROW_NUMBER() OVER (ORDER BY priority DESC, event_time ASC) as rank
+        FROM (
+            SELECT q.source_table, q.target_table, q.where_clause, q.event_time, q.strategy, q.lock_rows, q.status,
+            d.min_staleness, d.max_staleness,
+            floor(
+                (unix_timestamp(current_timestamp()) - 
+                unix_timestamp(to_utc_timestamp(q.event_time, 'America/Phoenix'))) 
+                / 60) AS staleness_m
+            (CASE WHEN staleness_m < d.min_staleness THEN 0                 
+                  WHEN (max_staleness - staleness_m) > 60 THEN 1              
+                  WHEN (max_staleness - staleness_m) > 45 THEN 2             
+                  WHEN (max_staleness - staleness_m) > 30 THEN 3             
+                  WHEN (max_staleness - staleness_m) > 15 THEN 4             
+                  WHEN (max_staleness - staleness_m) > 10 THEN 5             
+                  WHEN (max_staleness - staleness_m) > 5 THEN 6             
+                  WHEN (max_staleness - staleness_m) > 3 THEN 7             
+                  WHEN (max_staleness - staleness_m) > 2 THEN 8             
+                  WHEN (max_staleness - staleness_m) > 1 THEN 9             
+                  WHEN (max_staleness - staleness_m) > 0 THEN 10            
+                  WHEN (max_staleness - staleness_m) > -5 THEN 15             
+                  WHEN (max_staleness - staleness_m) > -10 THEN 20 
+                  ELSE 25                
+            END) * q.priority as priority
+            FROM {p_queue.queue_tbl} q
+            JOIN {demographic_table} d 
+            ON q.source_table = d.source_table
+        ) sub
+        WHERE status = 'Q'
+        AND priority > 0
+    )
+    """
+
+# COMMAND ----------
+
 @dataclass(frozen=True)
 class TrackerRecord:
     source_table: str
@@ -88,6 +135,49 @@ def query_tracking_table(watermark: EventTime, td_client: TeradataClient = td_cl
 
 # COMMAND ----------
 
+@dataclass(frozen=True)
+class TableAttrRecord:
+    source_table: str
+    target_table: str
+    strategy: str
+    disabled: bool
+    priority: int
+    min_staleness: int
+    max_staleness: int
+
+    @classmethod
+    def from_tuple(cls, line: tuple):
+        if len(line) != len(fields(cls)):
+            raise ValueError(f"Input line {line} should have {len(fields(cls))} fields")
+
+        source_table, target_table, strategy, disabled, priority, min_staleness, max_staleness = line
+
+        def valid_table(s: str) -> str | None:
+            if s:
+                if len(s.split(".")) != 2:
+                    raise ValueError(f"Table '{s}' must have 2 namespaces in the input config file")
+                return s
+            return None
+
+        if strategy not in ["TPT", "WriteNOS", "JDBC"]:
+            raise ValueError(f"Input line: {line} has invalid method. Should be 'TPT', 'WriteNOS', or 'JDBC'")
+
+        if isinstance(disabled, str):
+            if disabled.strip().lower() not in ["true", "false"]:
+                raise ValueError(f"Input line: {line} has invalid disabled status. Should be 'true' or 'false'")
+            disabled = disabled.strip().lower() == "true"
+
+        return cls(
+            valid_table(source_table),
+            valid_table(target_table or source_table),
+            strategy,
+            disabled,
+            int(priority),
+            int(min_staleness or 0),
+            int(max_staleness)
+        )
+
+
 def get_table_metadata(tables: set[str]) -> dict[str, TableAttrRecord]:
     if not tables:
         return set()
@@ -101,49 +191,8 @@ def get_table_metadata(tables: set[str]) -> dict[str, TableAttrRecord]:
 
 # COMMAND ----------
 
-def set_priority(load_time: str, min_staleness: int, max_staleness: int) -> int:
-    staleness: int = int(time.time()) - EventTime(load_time)
-    if staleness < min_staleness:
-        return 0
-    else:
-        match max_staleness - staleness:
-            case t if t > 60:
-                return 1
-            case t if t > 45:
-                return 2
-            case t if t > 30:
-                return 3
-            case t if t > 15:
-                return 4
-            case t if t > 10:
-                return 5
-            case t if t > 5:
-                return 6
-            case t if t > 3:
-                return 7
-            case t if t > 2:
-                return 8
-            case t if t > 1:
-                return 9
-            case t if t > 0:
-                return 10
-            case t if t > -5:
-                return 15
-            case t if t > -10:
-                return 20
-            case _:
-                return 25
-
-
-# COMMAND ----------
-
-def update_priority(
-        queued_tables:
-        list[QueueRecord],
-        new_tables: list[TrackerRecord]
-) -> tuple[list[QueueRecord], list[QueueRecord]]:
-
-    tables: set[str] = {r.source_table for r in new_tables} | {q.source_table for q in queued_tables}
+def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
+    tables: set[str] = {r.source_table for r in new_tables}
     tbl_metadata: dict[str, TableAttrRecord] = get_table_metadata(tables)
 
     # augment the new tables with the metadata
@@ -167,26 +216,14 @@ def update_priority(
     logs.logger.info(f"Found {len(new_tables_queue)} tables to enqueue.")
     logs.logger.debug(f"{str(new_tables_queue)}")
 
-    # update priorities, sorry this is ugly
-    def update_rows(rows: list[QueueRecord]):
-        return [
-            replace(
-                t,
-                priority=set_priority(
-                    t.event_time,
-                    (attrs := tbl_metadata[t.source_table]).min_staleness,
-                    attrs.max_staleness
-                ) * attrs.priority
-            ) for t in rows
-        ]
-
-    return update_rows(queued_tables), update_rows(new_tables_queue)
+    return new_tables_queue
 
 
 # COMMAND ----------
 
 logs.logger.info(f"Initializing..")
 queue.create()
+define_priority_view(queue)
 if reset_queue:
     logs.logger.info("Clearing the queue...")
     queue.truncate()
@@ -206,17 +243,14 @@ while True:
     queue_tables: list[QueueRecord] = queue.in_queue
 
     # grab the table details from the flat file and update priority
-    queue_tables_upd, new_tables = update_priority(queue_tables, updated_tables)
+    new_tables = add_metadata(updated_tables)
 
-    if not new_tables and not queue_tables_upd:
+    if not new_tables:
         logs.logger.info(f"No tables")
         time.sleep(60)
         continue
 
     # put them in the queue
-    if queue_tables_upd:
-        queue.upsert_queued(queue_tables_upd)
-        logs.logger.info(f"Updated priorities if existing tables")
     if new_tables:
         queue.upsert_queued(new_tables)
         logs.logger.info(f"Enqueud new tables")
