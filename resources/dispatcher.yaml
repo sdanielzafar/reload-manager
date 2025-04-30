@@ -14,6 +14,8 @@ resources:
           default: ${var.catalog}
         - name: queue_schema
           default: ${var.queue_schema}
+        - name: writenos_jobid
+          default: ${resources.jobs.WriteNOS_Runner.id}
         - name: writenos_threads
           default: ${var.writenos_threads}
         - name: jdbc_threads
