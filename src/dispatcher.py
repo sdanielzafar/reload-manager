@@ -18,7 +18,6 @@ from reloadmanager.mixins.logging_mixin import LoggingMixin
 from reloadmanager.utils.synchronization import LogLock
 
 logs = LoggingMixin()
-logs.set_logger_level("debug")
 
 # COMMAND ----------
 
@@ -27,9 +26,10 @@ dbutils.widgets.text("catalog", "")
 dbutils.widgets.text("queue_schema", "reloadmanager")
 dbutils.widgets.text("writenos_jobid", "")
 dbutils.widgets.text("writenos_threads", "")
-dbutils.widgets.text("jdbc_jobid", "")
+dbutils.widgets.text("jdbc_jobid", "0")
 dbutils.widgets.text("jdbc_threads", "")
 dbutils.widgets.text("source_tz", "")
+dbutils.widgets.text("log_level", "")
 
 catalog: str = dbutils.widgets.get("catalog")
 queue_schema: str = dbutils.widgets.get("queue_schema")
@@ -38,6 +38,9 @@ writenos_threads: int = int(dbutils.widgets.get("writenos_threads"))
 jdbc_jobid: int = int(dbutils.widgets.get("jdbc_jobid"))
 jdbc_threads: int = int(dbutils.widgets.get("jdbc_threads"))
 source_tz: str = dbutils.widgets.get("source_tz")
+log_level: str = dbutils.widgets.get("log_level")
+
+logs.set_logger_level(log_level)
 
 print(f"Source tz is: {source_tz}")
 EventTime.set_timezone(source_tz)
