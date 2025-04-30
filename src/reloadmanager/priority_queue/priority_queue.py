@@ -144,7 +144,7 @@ class PriorityQueue(LoggingMixin):
                   AND event_time = '{event_time}'
             """)
 
-        return source_table, target_table, lock_rows, event_time
+        return source_table, target_table, where_clause, lock_rows, event_time
 
     def upsert_queued(self, tables: list[QueueRecord]):
         """

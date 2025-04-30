@@ -10,7 +10,7 @@ variables:
     default: 2
   jdbc_threads:
     description: The number of concurrent JDBC threads allowed
-    default: 5
+    default: 0
   teradata_tz:
     description: The timezone for Teradata
     default: America/Phoenix
