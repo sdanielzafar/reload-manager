@@ -138,7 +138,7 @@ class LoaderThread(Thread, LoggingMixin):
             "where_clause": where_clause,
             "lock_rows": lock_rows
         }
-        output = dbx_client.trigger_job(self.reload_job_id, params, get_output=True, task_values=["result"])
+        output = dbx_client.trigger_job(self.reload_job_id, params, get_output=True)
         return exec(output)
 
 
