@@ -4,19 +4,8 @@ resources:
       name: WriteNOS-Runner
       tasks:
         - task_key: run
-          python_wheel_task:
-            package_name: reloadmanager
-            entry_point: reloadmanager
-            parameters:
-              - reload-table
-              - --source-table
-              - "{{job.parameters.source_table}}"
-              - --target-table
-              - "{{job.parameters.target_table}}"
-              - --where-clause
-              - "{{job.parameters.where_clause}}"
-              - --strategy
-              - "WriteNOS"
+          notebook_task:
+            notebook_path: ../src/writenos_runner.py
           existing_cluster_id: ${var.cluster_id}
           libraries:
             - whl: ../dist/*.whl
@@ -30,3 +19,5 @@ resources:
           default: ""
         - name: where_clause
           default: ""
+        - name: log_level
+          default: "debug"
