@@ -139,7 +139,7 @@ class LoaderThread(Thread, LoggingMixin):
             "lock_rows": lock_rows
         }
         output = dbx_client.trigger_job(self.reload_job_id, params, get_output=True)
-        return exec(output)
+        return eval(output)
 
 
 # COMMAND ----------
