@@ -51,7 +51,7 @@ class PriorityQueue(LoggingMixin):
                     lock_rows BOOLEAN,
                     priority INTEGER,
                     error STRING,
-                    num_records INTEGER,
+                    num_records BIGINT,
                     PRIMARY KEY (source_table, event_time)
             )
             """
