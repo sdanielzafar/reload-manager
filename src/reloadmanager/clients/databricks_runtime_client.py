@@ -35,9 +35,18 @@ class DatabricksRuntimeClient(GenericDatabaseClient):
             except Exception:
                 raise
 
-    def trigger_job(self, job_id: int, params: dict[str, str] | None = None, get_output=False):
+    def trigger_job(
+            self,
+            job_id: int,
+            params: dict[str, str] | None = None,
+            get_output=False,
+            task_values: list[str] | None = None
+    ):
         run = self.ws.jobs.run_now(job_id=job_id, job_parameters=params or {})
         if not get_output:
             return run.run_id
         run_id = run.result(timeout=timedelta(minutes=60))
-        return self.ws.jobs.get_run_output(run_id.tasks[0].run_id).notebook_output.result
+        if not task_values:
+            # get notebook output
+            return self.ws.jobs.get_run_output(run_id.tasks[0].run_id).notebook_output.result
+        return [run_id.tasks[0].task_values[v] for v in task_values]
