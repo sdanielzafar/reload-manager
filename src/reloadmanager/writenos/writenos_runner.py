@@ -61,7 +61,7 @@ class WriteNOSRunner(GenericRunner):
             col_type = row['ColumnType'].strip()
 
             # Determine how to handle different column types
-            if col_type in ('TS', 'SZ', 'MI', 'DM', 'HM', 'HS', 'AT', 'TZ'):
+            if col_type in ('TS', 'SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ'):
                 select_query = select_query + f"CAST (\"{row['ColumnName']}\" AS VARCHAR({row['ColumnLength']})) AS \"{row['ColumnName']}\" ,"
             elif col_type in ('DA',):
                 select_query = select_query + f"CAST (CAST (\"{row['ColumnName']}\" AS DATE format 'YYYY-MM-DD') AS VARCHAR(10))  AS \"{row['ColumnName']}\" ,"
