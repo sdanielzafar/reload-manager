@@ -43,4 +43,4 @@ metrics: ReportRecord = reloader.reload()
 
 # COMMAND ----------
 
-dbutils.notebook.exit(metrics)
+dbutils.notebook.exit(repr(metrics))
