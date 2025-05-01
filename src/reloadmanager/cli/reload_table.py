@@ -1,5 +1,4 @@
 import logging
-from databricks.sdk.runtime import dbutils
 
 from reloadmanager.table_loader.table_reloader import TableReloader
 
@@ -23,7 +22,4 @@ def main(args):
         lock_rows=args.lock_rows
     )
 
-    dbutils.jobs.taskValues.set(
-        key="result",
-        value=repr(reloader.reload())
-    )
+    reloader.reload()
