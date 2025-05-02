@@ -18,6 +18,8 @@ resources:
           default: ${resources.jobs.WriteNOS_Runner.id}
         - name: writenos_threads
           default: ${var.writenos_threads}
+        - name: jdbc_jobid
+          default: ${resources.jobs.JDBC_Runner.id}
         - name: jdbc_threads
           default: ${var.jdbc_threads}
         - name: source_tz
