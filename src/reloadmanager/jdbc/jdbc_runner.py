@@ -12,7 +12,7 @@ class JDBCRunner(GenericRunner):
     def pull(self, select_query: str, where_clause: str) -> list[tuple]:
         where_sql = f" WHERE {where_clause}" if where_clause else ""
         sql: str = f"{select_query} from {self.builder.source_table}{where_sql}"
-        payload: list[tuple] = self.source_interface.safe_query(sql, headers=False)
+        payload: list[tuple] = self.source_interface.safe_query(sql, headers=True)
         self.num_records = len(payload)
         return payload
 
