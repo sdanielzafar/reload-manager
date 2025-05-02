@@ -1,0 +1,23 @@
+resources:
+  jobs:
+    JDBC_Runner:
+      name: JDBC-Runner
+      tasks:
+        - task_key: run
+          notebook_task:
+            notebook_path: ../src/jdbc_runner.py
+          existing_cluster_id: ${var.cluster_id}
+          libraries:
+            - whl: ../dist/*.whl
+      queue:
+        enabled: true
+      max_concurrent_runs: ${var.jdbc_threads}
+      parameters:
+        - name: source_table
+          default: ""
+        - name: target_table
+          default: ""
+        - name: where_clause
+          default: ""
+        - name: log_level
+          default: "debug"

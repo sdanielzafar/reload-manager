@@ -3,6 +3,8 @@ from functools import cached_property
 
 from reloadmanager.generics.generic_config_builder import GenericConfigBuilder
 from reloadmanager.generics.generic_runner import GenericRunner, RunnerError
+from reloadmanager.jdbc.jdbc_config_builder import JDBCConfigBuilder
+from reloadmanager.jdbc.jdbc_runner import JDBCRunner
 from reloadmanager.writenos.writenos_runner import WriteNOSRunner
 from reloadmanager.writenos.writenos_config_builder import WriteNOSConfigBuilder
 from reloadmanager.mixins.logging_mixin import LoggingMixin
@@ -23,13 +25,21 @@ class TableReloader(LoggingMixin):
         self.lock_rows: bool = lock_rows
 
     @cached_property
-    def builder(self) -> WriteNOSConfigBuilder | GenericConfigBuilder:
+    def builder(self) -> WriteNOSConfigBuilder | JDBCConfigBuilder:
         match self.strategy:
             case "writenos":
                 return WriteNOSConfigBuilder(
                     source_table=self.source_table,
                     target_table=self.target_table,
-                    where_clause=self.where_clause
+                    where_clause=self.where_clause,
+                    lock_rows=self.lock_rows
+                )
+            case "jdbc":
+                return JDBCConfigBuilder(
+                    source_table=self.source_table,
+                    target_table=self.target_table,
+                    where_clause=self.where_clause,
+                    lock_rows=self.lock_rows
                 )
             case other:
                 raise NotImplementedError(f"Strategy: '{other}' has not been implemented")
@@ -39,6 +49,8 @@ class TableReloader(LoggingMixin):
         match self.strategy:
             case "writenos":
                 return WriteNOSRunner(builder=self.builder)
+            case "jdbc":
+                return JDBCRunner(builder=self.builder)
             case other:
                 raise NotImplemented(f"Strategy: '{other}' has not been implemented")
 

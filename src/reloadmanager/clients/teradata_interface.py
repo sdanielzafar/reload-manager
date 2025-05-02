@@ -7,9 +7,9 @@ class TeradataInterface(TeradataClient):
         self.db, self.table = source_table.split(".")
         self.lock_rows = lock_rows
 
-    def safe_query(self, query: str) -> list[dict]:
+    def safe_query(self, query: str, headers: bool = True) -> list[dict] | list[tuple]:
         return self.query(f'''{"LOCKING ROW FOR ACCESS" if self.lock_rows else ""}
-        {query};''', headers=True)
+        {query};''', headers=headers)
 
     def get_row_count(self) -> list[dict]:
         return self.safe_query(
