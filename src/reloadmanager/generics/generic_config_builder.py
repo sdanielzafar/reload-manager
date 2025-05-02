@@ -9,11 +9,13 @@ class GenericConfigBuilder(ABC):
             self,
             source_table: str,
             target_table: str,
-            where_clause: str = None
+            where_clause: str = None,
+            lock_rows: bool = True
     ):
         self.source_table: TableInfo = self._validate_source_table(source_table)
         self.target_table: TableInfo = self._validate_target_table(target_table)
-        self.where_clause = where_clause
+        self.where_clause: str = where_clause
+        self.lock_rows: bool = lock_rows
 
     @staticmethod
     def _validate_source_table(source_table: str) -> TableInfo:
