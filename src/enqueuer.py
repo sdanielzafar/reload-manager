@@ -112,6 +112,9 @@ def define_priority_view(p_queue: PriorityQueue) -> None:
     )
     """
 
+    dbx_client.query(sql)
+
+
 # COMMAND ----------
 
 @dataclass(frozen=True)
