@@ -86,9 +86,9 @@ class GenericRunner(ABC, LoggingMixin):
                     match col_type:
                         case decimal if "decimal" in decimal:
                             col_precision = decimal.upper()
-                        case string if "varchar" in decimal:
+                        case string if "varchar" in string:
                             col_precision = string.upper()
-                        case string if "char" in decimal:
+                        case string if "char" in string:
                             col_precision = string.upper()
                         case other:
                             col_precision = self.type_map.get(other)
