@@ -95,6 +95,11 @@ class LoaderThread(Thread, LoggingMixin):
         with self.queue_lock:
             task: tuple = self.queue.poll(self.strategy)
 
+        # if a WriteNOS thread does not find a WriteNOS table to load, it will take a JDBC one
+        if not task and self.strategy == "WriteNOS":
+            with self.queue_lock:
+                task: tuple = self.queue.poll("JDBC")
+
         if not task:
             self.logger.info(f"Thread {self.thread_id} found no queued tables. Sleeping...")
             time.sleep(60)
