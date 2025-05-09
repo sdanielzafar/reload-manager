@@ -256,7 +256,7 @@ while True:
 
     # put them in the queue
     if new_tables:
-        queue.upsert_queued(new_tables)
+        queue.upsert(new_tables)
         logs.logger.info(f"Enqueud new tables")
 
     # update watermark
