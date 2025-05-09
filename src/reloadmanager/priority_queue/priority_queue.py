@@ -139,7 +139,7 @@ class PriorityQueue(LoggingMixin):
 
         return source_table, target_table, where_clause, lock_rows, event_time
 
-    def upsert_queued(self, tables: list[QueueRecord]):
+    def upsert(self, tables: list[QueueRecord]):
         """
         Insert new rows into the Delta queue table or, when the row already exists
         and is still queued, refresh its priority + latest-event timestamp.
