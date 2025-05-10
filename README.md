@@ -65,13 +65,18 @@ databricks bundle deploy -p [profile]
 
 ### Workflows
 - `Enqueuer`: puts tables into the queue to be reloaded. All project-specific logic should reside here only
-- `Dispatcher`: you specify the number of threads and import types, this dispatches loads for you and updates the queue history tables
+- `Dispatcher`: you specify the number of threads and import types, this dispatches loads for you and updates the queue 
+history table for tracking
 - `WriteNOS_Runner`: workflow that takes a table and reloads it using WriteNOS. Called by the `Dispatcher` or manually.
 - `JDBC_Runner`: workflow that takes a table and reloads it using JDBC. Called by the `Dispatcher` or manually.
-- `TPT_Runner`: workflow that takes a table and reloads it using TPT. Not yet implemented.
+- `TPT_Runner`: workflow that takes a table and reloads it using TPT. *Not yet implemented.*
 
-### Queue tables
-- `queue`: 
+### `PriorityQueue`
+The `PriorityQueue` comprises two Delta tables:
+- `queue`: the current queue
+- `queue_history`: a record of all the tables that have been loaded
+
+And the class `reloadmanager.priority_queue.PriorityQueue` which will help interact with these.
 
 ## Contribute
 We'd love to see your additions. Feel free to contribute back. Contact Dan Z for help with your first PR. 
