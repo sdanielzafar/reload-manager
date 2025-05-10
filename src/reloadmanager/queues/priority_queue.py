@@ -2,7 +2,7 @@ import time
 from pyspark.sql import DataFrame
 
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
-from reloadmanager.priority_queue.models import QueueRecord
+from reloadmanager.queues.models import QueueRecord
 from reloadmanager.utils.event_time import EventTime
 from reloadmanager.mixins.logging_mixin import LoggingMixin
 
@@ -187,13 +187,13 @@ class PriorityQueue(LoggingMixin):
         """
 
         from delta.tables import DeltaTable
-        from pyspark.sql.functions import col, when, lit
+        from pyspark.sql.functions import col, when, lit, concat
 
         input_cols: list = tables_sdf.columns
 
         req_columns: set[str] = {'source_table', 'strategy'}
         if req_columns.difference(input_cols):
-            raise ValueError(f"Both required columns: {str(req_columns)} not found in table_sdf, only: {input_cols}")
+            raise ValueError(f"Both required columns: {str(req_columns)} not found in input dataframe, only: {input_cols}")
 
         all_columns: set[str] = \
             {'source_table', 'strategy', 'target_table', 'where_clause', 'event_time', 'lock_rows', 'priority'}
@@ -216,7 +216,7 @@ class PriorityQueue(LoggingMixin):
         tables_sdf: DataFrame = tables_sdf.select(
             col("source_table"),
             when(col("target_table").isNotNull(), col("target_table"))
-            .otherwise(lit(f"{self.catalog}.") + col("source_table")).alias("target_table"),
+            .otherwise(concat(lit(f"{self.catalog}."), col("source_table"))).alias("target_table"),
             when(col("where_clause").isNotNull(), col("where_clause")).otherwise(lit("")).alias("where_clause"),
             when(col("event_time").isNotNull(), col("event_time")).otherwise(lit(now_str)).alias("event_time"),
             col("strategy"),
@@ -239,6 +239,7 @@ class PriorityQueue(LoggingMixin):
             "status": "s.status",
             "priority": "s.priority"
         }).whenNotMatchedInsert(values={
+            "source_table": "s.source_table",
             "target_table": "s.target_table",
             "where_clause": "s.where_clause",
             "event_time": "s.event_time",

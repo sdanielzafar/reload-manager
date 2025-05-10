@@ -11,8 +11,8 @@ from databricks.sdk.runtime import dbutils
 
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
 from reloadmanager.clients.teradata_client import TeradataClient
-from reloadmanager.priority_queue.models import QueueRecord
-from reloadmanager.priority_queue.priority_queue import PriorityQueue
+from reloadmanager.queues.models import QueueRecord
+from reloadmanager.queues.priority_queue import PriorityQueue
 from reloadmanager.utils.event_time import EventTime
 from reloadmanager.mixins.logging_mixin import LoggingMixin
 
