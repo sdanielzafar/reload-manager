@@ -32,7 +32,7 @@ targets:
       cluster_id:
         default: 0416-180448-i5l71jnf
       validation_jobid:
-        default: null
+        default: 0
     mode: development
     default: true
     workspace:
