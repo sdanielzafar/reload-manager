@@ -1,17 +1,22 @@
 import time
+from pyspark.sql import DataFrame
 
+from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
 from reloadmanager.priority_queue.models import QueueRecord
 from reloadmanager.utils.event_time import EventTime
-from reloadmanager.clients.databricks_client_factory import get_dbx_client
 from reloadmanager.clients.generic_database_client import GenericDatabaseClient
 from reloadmanager.mixins.logging_mixin import LoggingMixin
 
 
 class PriorityQueue(LoggingMixin):
-    def __init__(self, queue_schema: str, catalog: str | None = None, client: GenericDatabaseClient = None):
+    def __init__(self,
+                 queue_schema: str,
+                 catalog: str | None = None,
+                 client: DatabricksRuntimeClient = None):
         self.schema: str = queue_schema
-        self.client: GenericDatabaseClient = client if client else get_dbx_client()
-        self.catalog_schema: str = (f"`{catalog}`." if catalog else "") + self.schema
+        self.client: DatabricksRuntimeClient = client or DatabricksRuntimeClient()
+        self.catalog = catalog if catalog else ""
+        self.catalog_schema: str = f"`{self.catalog}`." + self.schema
         self.queue_tbl: str = f"{self.catalog_schema}.QUEUE"
         self.queue_hist_tbl: str = f"{self.catalog_schema}.QUEUE_HISTORY"
 
@@ -139,7 +144,7 @@ class PriorityQueue(LoggingMixin):
 
         return source_table, target_table, where_clause, lock_rows, event_time
 
-    def upsert(self, tables: list[QueueRecord]):
+    def upsert(self, tables: list[QueueRecord]) -> None:
         """
         Insert new rows into the Delta queue table or, when the row already exists
         and is still queued, refresh its priority + latest-event timestamp.
@@ -167,6 +172,82 @@ class PriorityQueue(LoggingMixin):
         self.logger.debug(f"Upsert query:\n{sql}")
 
         self.client.query(sql)
+
+    def batch_upsert_spark(self, tables_sdf: DataFrame) -> None:
+        """
+        Insert new rows into the Delta queue using a Spark DataFrame
+        The Dataframe can have schema like QueueRecord:
+            - source_table (required)
+            - strategy (required)
+            - target_table (defaults to {self.catalog}.source_table)
+            - where_clause (default "")
+            - event_time (default EventTime.now())
+            - lock_rows (default True)
+            - priority (default 1)
+        )
+        """
+
+        from delta.tables import DeltaTable
+        from pyspark.sql.functions import col, when, lit
+
+        input_cols: list = tables_sdf.columns
+
+        req_columns: set[str] = {'source_table', 'strategy'}
+        if not req_columns.difference(input_cols):
+            raise ValueError(f"Both required column: {str(req_columns)} not found in table_sdf, only: {input_cols}")
+
+        all_columns: set[str] = \
+            {'source_table', 'strategy', 'target_table', 'where_clause', 'event_time', 'lock_rows', 'priority'}
+        if not (forbidden := all_columns.difference(input_cols)):
+            raise ValueError(f"Found forbidden column(s) {str(forbidden)}. Columns allowed: {all_columns}")
+
+        # Inject missing columns with default values
+        if 'target_table' not in input_cols:
+            tables_sdf = tables_sdf.withColumn('target_table', lit(None).cast("string"))
+        if 'where_clause' not in input_cols:
+            tables_sdf = tables_sdf.withColumn('where_clause', lit(None).cast("string"))
+        if 'event_time' not in input_cols:
+            tables_sdf = tables_sdf.withColumn('event_time', lit(None).cast("string"))
+        if 'lock_rows' not in input_cols:
+            tables_sdf = tables_sdf.withColumn('lock_rows', lit(None).cast("boolean"))
+        if 'priority' not in input_cols:
+            tables_sdf = tables_sdf.withColumn('priority', lit(None).cast("int"))
+
+        now_str: str = str(EventTime.now())
+        tables_sdf: DataFrame = tables_sdf.select(
+            col("source_table"),
+            when(col("target_table").isNotNull(), col("target_table"))
+            .otherwise(lit(f"{self.catalog}.") + col("source_table")).alias("target_table"),
+            when(col("where_clause").isNotNull(), col("where_clause")).otherwise(lit("")).alias("where_clause"),
+            when(col("event_time").isNotNull(), col("event_time")).otherwise(lit(now_str)).alias("event_time"),
+            col("strategy"),
+            when(col("lock_rows").isNotNull(), col("lock_rows")).otherwise(lit(True)).alias("lock_rows"),
+            lit('Q').alias("status"),
+            when(col("priority").isNotNull(), col("priority")).otherwise(lit(1)).alias("priority")
+        )
+
+        delta_table = DeltaTable.forName(self.client.spark, self.queue_tbl)
+
+        delta_table.alias("t").merge(
+            tables_sdf.alias("s"),
+            "t.source_table = s.source_table"
+        ).whenMatchedUpdate(set={
+            "target_table": "s.target_table",
+            "where_clause": "s.where_clause",
+            "event_time": "s.event_time",
+            "strategy": "s.strategy",
+            "lock_rows": "s.lock_rows",
+            "status": "s.status",
+            "priority": "s.priority"
+        }).whenNotMatchedInsert(values={
+            "target_table": "s.target_table",
+            "where_clause": "s.where_clause",
+            "event_time": "s.event_time",
+            "strategy": "s.strategy",
+            "lock_rows": "s.lock_rows",
+            "status": "s.status",
+            "priority": "s.priority"
+        }).execute()
 
     @property
     def in_queue(self) -> list[QueueRecord]:
@@ -235,4 +316,3 @@ class PriorityQueue(LoggingMixin):
             if "not found" in str(e):
                 return 0
             raise
-
