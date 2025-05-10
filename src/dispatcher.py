@@ -29,6 +29,7 @@ dbutils.widgets.text("writenos_jobid", "")
 dbutils.widgets.text("writenos_threads", "")
 dbutils.widgets.text("jdbc_jobid", "0")
 dbutils.widgets.text("jdbc_threads", "")
+dbutils.widgets.text("validation_jobid", "")
 dbutils.widgets.text("source_tz", "")
 dbutils.widgets.text("log_level", "")
 
@@ -38,6 +39,8 @@ writenos_jobid: int = int(dbutils.widgets.get("writenos_jobid"))
 writenos_threads: int = int(dbutils.widgets.get("writenos_threads"))
 jdbc_jobid: int = int(dbutils.widgets.get("jdbc_jobid"))
 jdbc_threads: int = int(dbutils.widgets.get("jdbc_threads"))
+validation_jobid_raw: str = dbutils.widgets.get("validation_jobid")
+validation_jobid: int = validation_jobid_raw if validation_jobid_raw else 0
 source_tz: str = dbutils.widgets.get("source_tz")
 log_level: str = dbutils.widgets.get("log_level")
 
@@ -64,11 +67,13 @@ class LoaderThread(Thread, LoggingMixin):
                  reload_job_id: int,
                  stop_signal: Event,
                  queue_lock: Lock,
+                 validation_job_id: int = 0,
                  priority_queue: PriorityQueue = queue,
                  databricks_client: DatabricksRuntimeClient = DatabricksRuntimeClient):
         super().__init__()
         self.strategy: str = strategy
         self.thread_id: str = f"{strategy.lower()}_{str(thread_id)}"
+        self.validation_job_id: int = validation_job_id
         self.logger.info(f"Thread {thread_id} starting...")
         self.stop_thread: bool = False
         self.stop_signal: Event = stop_signal
@@ -115,6 +120,10 @@ class LoaderThread(Thread, LoggingMixin):
             self.logger.info(f"Thread {self.thread_id} reloaded table '{source_table}'")
             duration, end_time, n_records, status, error = \
                 result.duration, result.end, result.num_records, result.status, result.error
+
+            if self.validation_job_id:
+                self.trigger_validation_job(source_table, target_table)
+
         except Exception as e:
             self.logger.error(f"CRITICAL FAILURE: Thread {self.thread_id} failed to reload '{source_table}': {e}")
             traceback.print_exc()
@@ -146,15 +155,23 @@ class LoaderThread(Thread, LoggingMixin):
         output = dbx_client.trigger_job(self.reload_job_id, params, get_output=True)
         return eval(output)
 
+    def trigger_validation_job(self, source_table: str, target_table: str):
+        params: dict[str, str] = {
+            "source_table": source_table,
+            "target_table": target_table,
+            "strategy": self.strategy
+        }
+        dbx_client.trigger_job(self.reload_job_id, params)
+
 
 # COMMAND ----------
 
 # start worker threads
-def create_workers(strategy, count, reload_job_id) -> list[LoaderThread]:
+def create_workers(strategy, count, reload_job_id, valid_jobid=validation_jobid) -> list[LoaderThread]:
     if count > 0:
         logs.logger.info(f"Creating {count} {strategy} threads...")
         threads = [
-            LoaderThread(i, strategy, reload_job_id, stop_signal, queue_lock)
+            LoaderThread(i, strategy, reload_job_id, stop_signal, queue_lock, valid_jobid)
             for i in range(count)
         ]
         for thread in threads:

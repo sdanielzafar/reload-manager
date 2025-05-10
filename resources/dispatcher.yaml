@@ -22,6 +22,8 @@ resources:
           default: ${resources.jobs.JDBC_Runner.id}
         - name: jdbc_threads
           default: ${var.jdbc_threads}
+        - name: validation_jobid
+          default: ${var.validation_jobid}
         - name: source_tz
           default: ${var.teradata_tz}
         - name: log_level
