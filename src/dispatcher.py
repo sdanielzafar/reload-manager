@@ -12,7 +12,7 @@ from threading import Thread, Event, Lock
 from databricks.sdk.runtime import dbutils
 
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
-from reloadmanager.priority_queue.priority_queue import PriorityQueue
+from reloadmanager.queues.priority_queue import PriorityQueue
 from reloadmanager.table_loader.report_record import ReportRecord
 from reloadmanager.utils.event_time import EventTime
 from reloadmanager.mixins.logging_mixin import LoggingMixin
