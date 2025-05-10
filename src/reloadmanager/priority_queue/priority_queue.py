@@ -4,7 +4,6 @@ from pyspark.sql import DataFrame
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
 from reloadmanager.priority_queue.models import QueueRecord
 from reloadmanager.utils.event_time import EventTime
-from reloadmanager.clients.generic_database_client import GenericDatabaseClient
 from reloadmanager.mixins.logging_mixin import LoggingMixin
 
 
@@ -193,8 +192,8 @@ class PriorityQueue(LoggingMixin):
         input_cols: list = tables_sdf.columns
 
         req_columns: set[str] = {'source_table', 'strategy'}
-        if not req_columns.difference(input_cols):
-            raise ValueError(f"Both required column: {str(req_columns)} not found in table_sdf, only: {input_cols}")
+        if req_columns.difference(input_cols):
+            raise ValueError(f"Both required columns: {str(req_columns)} not found in table_sdf, only: {input_cols}")
 
         all_columns: set[str] = \
             {'source_table', 'strategy', 'target_table', 'where_clause', 'event_time', 'lock_rows', 'priority'}
