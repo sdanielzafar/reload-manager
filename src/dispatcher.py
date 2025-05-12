@@ -122,7 +122,7 @@ class LoaderThread(Thread, LoggingMixin):
                 result.duration, result.end, result.num_records, result.status, result.error
 
             if self.validation_job_id:
-                self.trigger_validation_job(source_table, target_table)
+                self.trigger_validation_job(source_table, target_table, n_records)
 
         except Exception as e:
             self.logger.error(f"CRITICAL FAILURE: Thread {self.thread_id} failed to reload '{source_table}': {e}")
@@ -155,11 +155,12 @@ class LoaderThread(Thread, LoggingMixin):
         output = dbx_client.trigger_job(self.reload_job_id, params, get_output=True)
         return eval(output)
 
-    def trigger_validation_job(self, source_table: str, target_table: str):
+    def trigger_validation_job(self, source_table: str, target_table: str, row_count: int):
         params: dict[str, str] = {
             "source_table": source_table,
             "target_table": target_table,
-            "strategy": self.strategy
+            "strategy": self.strategy,
+            "num_records": row_count
         }
         dbx_client.trigger_job(self.reload_job_id, params)
 
