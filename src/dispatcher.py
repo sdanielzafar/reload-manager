@@ -162,7 +162,7 @@ class LoaderThread(Thread, LoggingMixin):
             "strategy": self.strategy,
             "num_records": row_count
         }
-        dbx_client.trigger_job(self.reload_job_id, params)
+        dbx_client.trigger_job(self.validation_job_id, params)
 
 
 # COMMAND ----------
