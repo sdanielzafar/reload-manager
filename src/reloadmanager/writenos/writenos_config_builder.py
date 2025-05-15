@@ -27,4 +27,4 @@ class WriteNOSConfigBuilder(GenericConfigBuilder, SecretMixin):
     @cached_property
     def stage_root_dir(self) -> str:
         ts: str = datetime.now().strftime("%Y%m%d_%H%M%S_") + f"{datetime.now().microsecond // 1000:03d}"
-        return f"reload-manager-stage/{self.target_table.catalog}/{self.id}/migration_{self.source_table.table}_{ts}"
+        return f"reload-manager-stage/{self.target_table.catalog}/{self.source_table.as_path()}/migration_{self.id}_{ts}"
