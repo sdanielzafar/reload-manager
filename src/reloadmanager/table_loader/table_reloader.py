@@ -1,7 +1,6 @@
 import time
 from functools import cached_property
 
-from reloadmanager.generics.generic_config_builder import GenericConfigBuilder
 from reloadmanager.generics.generic_runner import GenericRunner, RunnerError
 from reloadmanager.jdbc.jdbc_config_builder import JDBCConfigBuilder
 from reloadmanager.jdbc.jdbc_runner import JDBCRunner

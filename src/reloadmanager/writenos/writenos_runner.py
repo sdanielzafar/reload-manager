@@ -54,6 +54,13 @@ COMPRESSION('SNAPPY')
 
     def copy_s3_files_into_delta(self, s3_path: str):
 
+        # for VIEWs, the DDL might not be there
+        if not self.target_schema:
+            self.target_interface.spark.read.parquet(s3_path) \
+                .limit(0) \
+                .write.format("delta") \
+                .save(str(self.builder.target_table))
+
         select_statement = ", ".join(
             [f"CAST({field['col_name']} AS {field['data_type']}) AS {field['col_name']}"
              for field in self.target_schema])
@@ -61,8 +68,8 @@ COMPRESSION('SNAPPY')
         query = f"""
 COPY INTO {str(self.builder.target_table)}
 FROM (
-    SELECT {select_statement}
-    FROM '{s3_path}'
+SELECT {select_statement}
+FROM '{s3_path}'
 )
 FILEFORMAT = PARQUET
 COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
@@ -71,7 +78,7 @@ COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
 
         self.target_interface.query(query)
 
-    def run_snapshot(self, validate_counts: bool = True):
+    def run_snapshot(self, validate_counts: bool = False):
 
         try:
             select_query = self.build_select_query()

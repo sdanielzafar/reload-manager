@@ -18,7 +18,8 @@ class TeradataInterface(TeradataClient):
 
     def get_columns(self) -> list[dict]:
         return self.safe_query(
-            f"(SELECT * FROM DBC.ColumnsV WHERE DatabaseName = '{self.db}' and TableName = '{self.table}')"
+            # f"(SELECT * FROM DBC.ColumnsV WHERE DatabaseName = '{self.db}' and TableName = '{self.table}')"
+            f"HELP COLUMN {self.db}.{self.table}.*)"
         )
 
     def get_indexes(self) -> list[dict]:
