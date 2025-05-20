@@ -38,7 +38,7 @@ class GenericRunner(ABC, LoggingMixin):
         }
 
     @cached_property
-    def target_schema(self) -> list[dict[str, str]] | None:
+    def target_schema(self) -> list[dict[str, str]]:
         tbl_info: list[dict[str, str]]
         try:
             tbl_info = self.target_interface.query(
@@ -118,6 +118,10 @@ class GenericRunner(ABC, LoggingMixin):
         :return:
         """
 
+        # materialize this here, in case th DDL should be created, because there's np guarantee it will be referenced
+        # in the if condition below.
+        target_schema: list[dict[str, str]] = self.target_schema
+
         # Initialize the select query string
         select_query = "SELECT "
 
@@ -139,7 +143,7 @@ class GenericRunner(ABC, LoggingMixin):
                 # but some types in Teradata are numeric and don't have these, so we need to handle dynamically
                 if (int(row['Decimal Total Digits']) < 0) | (int(row['Decimal Fractional Digits']) < 0):
                     col_type = next(
-                        field["data_type"] for field in self.target_schema if field["col_name"] == col_name
+                        field["data_type"] for field in target_schema if field["col_name"] == col_name
                     )
                     match col_type:
                         case decimal if "decimal" in decimal:
