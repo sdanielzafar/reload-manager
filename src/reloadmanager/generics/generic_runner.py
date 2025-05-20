@@ -39,9 +39,7 @@ class GenericRunner(ABC, LoggingMixin):
 
     @cached_property
     def target_schema(self) -> list[dict[str, str]]:
-        tbl_info: list[dict[str, str]]
-
-        tbl_exists: bool = bool(self.target_interface.spark.sql(
+        tbl_exists: bool = bool(self.target_interface.query(
             f"SHOW TABLES IN {self.builder.target_table.catalog_schema} LIKE '{self.builder.target_table.table}';"
         ))
 
@@ -49,7 +47,7 @@ class GenericRunner(ABC, LoggingMixin):
             self.logger.info(f"TABLE or VIEW '{self.builder.target_table}' not found. Attempting to create DDL..")
             self.create_ddl()
 
-        tbl_info = self.target_interface.query(
+        tbl_info: list[dict[str, str]] = self.target_interface.query(
             f"DESCRIBE TABLE {str(self.builder.target_table)}",
             headers=True
         )
