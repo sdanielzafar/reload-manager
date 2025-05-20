@@ -47,7 +47,7 @@ class GenericRunner(ABC, LoggingMixin):
             )
         except AnalysisException as e:
             if "TABLE_OR_VIEW_NOT_FOUND" in str(e):
-                print(f"TABLE or VIEW '{self.builder.target_table}' not found. Attempting to create DDL..")
+                self.logger.info(f"TABLE or VIEW '{self.builder.target_table}' not found. Attempting to create DDL..")
                 self.create_ddl()
                 tbl_info = self.target_interface.query(
                     f"DESCRIBE TABLE {str(self.builder.target_table)}",
