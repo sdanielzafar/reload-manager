@@ -99,8 +99,10 @@ class GenericRunner(ABC, LoggingMixin):
                     f"Unable to create DDL from {str(self.builder.source_table)}, found unexepected type: {col_type}"
                 )
 
-        ddl_query += ") USING DELTA;"
+        # get rid of last comma
+        ddl_query_fmt: str = ddl_query[:-2]
 
+        ddl_query_fmt += ") USING DELTA;"
         self.logger.debug(f"Creating table with DDL: `{ddl_query}`")
 
         self.target_interface.query(ddl_query)
@@ -154,8 +156,8 @@ class GenericRunner(ABC, LoggingMixin):
             else:
                 select_query += f"\"{col_name}\", "
 
-        # Return the select query string
-        return select_query[:-1]
+        # Return the select query string, but get rid of last comma
+        return select_query[:-2]
 
     def build_select_query(self):
         cols: list[dict] = self.source_interface.get_columns()
