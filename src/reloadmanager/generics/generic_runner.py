@@ -40,23 +40,19 @@ class GenericRunner(ABC, LoggingMixin):
     @cached_property
     def target_schema(self) -> list[dict[str, str]]:
         tbl_info: list[dict[str, str]]
-        try:
-            tbl_info = self.target_interface.query(
-                f"DESCRIBE TABLE {str(self.builder.target_table)}",
-                headers=True
-            )
-        except AnalysisException as e:
-            if "TABLE_OR_VIEW_NOT_FOUND" in str(e):
-                self.logger.info(f"TABLE or VIEW '{self.builder.target_table}' not found. Attempting to create DDL..")
-                self.create_ddl()
-                tbl_info = self.target_interface.query(
-                    f"DESCRIBE TABLE {str(self.builder.target_table)}",
-                    headers=True
-                )
-            else:
-                raise e
-        except Exception:
-            raise
+
+        tbl_exists: bool = bool(self.target_interface.spark.sql(
+            f"SHOW TABLES IN {self.builder.target_table.catalog_schema} LIKE '{self.builder.target_table.table}';"
+        ))
+
+        if not tbl_exists:
+            self.logger.info(f"TABLE or VIEW '{self.builder.target_table}' not found. Attempting to create DDL..")
+            self.create_ddl()
+
+        tbl_info = self.target_interface.query(
+            f"DESCRIBE TABLE {str(self.builder.target_table)}",
+            headers=True
+        )
 
         # get rid of REPLICATE_IO_METADATA_VERSION
         tbl_info_cln: list[dict[str, str]] = [

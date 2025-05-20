@@ -10,5 +10,8 @@ class TableInfo:
     def as_path(self):
         return "__".join(v for v in (self.catalog, self.schema, self.table) if v)
 
+    def catalog_schema(self):
+        return ".".join(v for v in (self.catalog, self.schema) if v)
+
     def __str__(self):
         return ".".join(v for v in (self.catalog, self.schema, self.table) if v)
