@@ -107,7 +107,7 @@ class GenericRunner(ABC, LoggingMixin):
 
         ddl_query += ") USING DELTA;"
 
-        self.logger.debug(ddl_query)
+        self.logger.debug(f"Creating table with DDL: `{ddl_query}`")
 
         self.target_interface.query(ddl_query)
 
@@ -128,12 +128,12 @@ class GenericRunner(ABC, LoggingMixin):
 
             # Determine how to handle different column types
             if col_type in ('TS', 'SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ'):
-                select_query += f"CAST (\"{col_name}\" AS VARCHAR({row['Max Length']})) AS \"{col_name}\" ,"
+                select_query += f"CAST (\"{col_name}\" AS VARCHAR({row['Max Length']})) AS \"{col_name}\", "
             elif col_type in ('DA',):
-                select_query += f"CAST (CAST (\"{col_name}\" AS DATE format 'YYYY-MM-DD') AS VARCHAR(10))  AS \"{col_name}\" ,"
+                select_query += f"CAST (CAST (\"{col_name}\" AS DATE format 'YYYY-MM-DD') AS VARCHAR(10))  AS \"{col_name}\", "
             elif col_type in ('CF', 'CO'):
                 col_len = row['Format'].replace('X(', '').replace(')', '').strip()
-                select_query += f"CAST (\"{col_name}\" AS VARCHAR({col_len})) AS \"{col_name}\" ,"
+                select_query += f"CAST (\"{col_name}\" AS VARCHAR({col_len})) AS \"{col_name}\", "
             elif col_type in ('N', 'D'):
                 # for most numeric and decimal columns, we can just cast using precision and scale.
                 # but some types in Teradata are numeric and don't have these, so we need to handle dynamically
@@ -150,11 +150,11 @@ class GenericRunner(ABC, LoggingMixin):
                             col_precision = char.upper()
                         case other:
                             col_precision = self.type_map.get(other)
-                    select_query += f"CAST (\"{col_name}\" AS {col_precision}) AS \"{col_name}\" ,"
+                    select_query += f"CAST (\"{col_name}\" AS {col_precision}) AS \"{col_name}\", "
                 else:
-                    select_query += f"CAST (\"{col_name}\" AS DECIMAL({int(row['Decimal Total Digits'])}, {int(row['Decimal Fractional Digits'])})) AS \"{col_name}\" ,"
+                    select_query += f"CAST (\"{col_name}\" AS DECIMAL({int(row['Decimal Total Digits'])}, {int(row['Decimal Fractional Digits'])})) AS \"{col_name}\", "
             else:
-                select_query += f"\"{col_name}\" ,"
+                select_query += f"\"{col_name}\", "
 
         # Return the select query string
         return select_query[:-1]
