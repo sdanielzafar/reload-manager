@@ -25,17 +25,21 @@ class WriteNOSRunner(GenericRunner):
         self.logger.info(f"Exporting to S3 bucket suffix {self.builder.stage_root_dir}")
 
         s3 = f"/s3/s3.amazonaws.com/{self.builder.aws_bucket}/{self.builder.stage_root_dir}/"
-        query = f'''LOCKING ROW FOR ACCESS
-SELECT *
-FROM WRITE_NOS (
-ON  ({select_query[:-1]} FROM {str(self.builder.source_table)}{where_sql})
-USING
-AUTHORIZATION({self.source_interface.td_user}.authAccess)
-LOCATION('{s3}')
-STOREDAS('PARQUET')
-MAXOBJECTSIZE('16MB')
-COMPRESSION('SNAPPY')
-) AS d;'''
+
+        full_query: str = f"{select_query} FROM {str(self.builder.source_table)}{where_sql}"
+        self.logger.info(f"Using query {full_query}")
+
+        query = dedent(f'''LOCKING ROW FOR ACCESS
+            SELECT *
+            FROM WRITE_NOS (
+            ON  ({full_query})
+            USING
+            AUTHORIZATION({self.source_interface.td_user}.authAccess)
+            LOCATION('{s3}')
+            STOREDAS('PARQUET')
+            MAXOBJECTSIZE('16MB')
+            COMPRESSION('SNAPPY')
+            ) AS d;''')
 
         self.logger.debug(f'Running Write_NOS using query: \n{query}')
 
@@ -76,7 +80,6 @@ COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
 
         try:
             select_query = self.select_query
-            self.logger.info(f"Using query {select_query}")
 
             s3_path = self.export_nos(select_query, self.builder.where_clause)
 
