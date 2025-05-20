@@ -81,7 +81,7 @@ class GenericRunner(ABC, LoggingMixin):
             col_name: str = row['Column Name'].strip()
 
             # Determine how to handle different column types
-            if col_type in ('SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ', 'VC', 'CF', 'CO', 'JN'):
+            if col_type in ('SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ', 'CV', 'CF', 'CO', 'JN'):
                 ddl_query += f"{col_name} STRING, "
             elif col_type in ('DA',):
                 ddl_query += f"{col_name} DATE, "
