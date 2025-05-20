@@ -73,7 +73,7 @@ class GenericRunner(ABC, LoggingMixin):
 
     def create_ddl(self) -> None:
 
-        ddl_query: str = f"CREATE TABLE ({str(self.builder.target_table)} "
+        ddl_query: str = f"CREATE TABLE {str(self.builder.target_table)} ("
 
         # Iterate over each row in the DataFrame containing column metadata
         for row in self.source_interface.get_columns():
