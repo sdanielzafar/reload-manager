@@ -56,10 +56,12 @@ COMPRESSION('SNAPPY')
 
         # for VIEWs, the DDL might not be there
         if not self.target_schema:
-            self.target_interface.spark.read.parquet(s3_path) \
-                .limit(0) \
-                .write.format("delta") \
-                .save(str(self.builder.target_table))
+            self.create_ddl()
+        # if not self.target_schema:
+        #     self.target_interface.spark.read.parquet(s3_path) \
+        #         .limit(0) \
+        #         .write.format("delta") \
+        #         .save(str(self.builder.target_table))
 
         select_statement = ", ".join(
             [f"CAST({field['col_name']} AS {field['data_type']}) AS {field['col_name']}"

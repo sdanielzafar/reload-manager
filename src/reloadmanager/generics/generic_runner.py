@@ -65,6 +65,44 @@ class GenericRunner(ABC, LoggingMixin):
 
         return tbl_info_cln
 
+    def create_ddl(self) -> None:
+
+        ddl_query: str = f"CREATE TABLE ({str(self.builder.target_table)} "
+
+        # Iterate over each row in the DataFrame containing column metadata
+        for row in self.source_interface.get_columns():
+            col_type: str = row['Type'].strip()
+            col_name: str = row['Column Name'].strip()
+
+            # Determine how to handle different column types
+            if col_type in ('SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ', 'VC', 'CF', 'CO', 'JN'):
+                ddl_query += f"{col_name} STRING, "
+            elif col_type in ('DA',):
+                ddl_query += f"{col_name} DATE, "
+            elif col_type in ('TS',):
+                ddl_query += f"{col_name} TIMESTAMP, "
+            elif col_type in ('I', 'I1', 'I2'):
+                ddl_query += f"{col_name} INTEGER, "
+            elif col_type in ('I8',):
+                ddl_query += f"{col_name} LONG, "
+            elif col_type in ('D', 'N'):
+                # for most numeric and decimal columns, we can just cast using precision and scale.
+                # but some types in Teradata are numeric and don't have these, so we need to handle dynamically
+                if (int(row['Decimal Total Digits']) < 0) | (int(row['Decimal Fractional Digits']) < 0):
+                    ddl_query += f"{col_name} VARCHAR(256)), "
+                else:
+                    ddl_query += f"{col_name} DECIMAL({int(row['Decimal Total Digits'])}, {int(row['Decimal Fractional Digits'])})), "
+            elif col_type in ('F',):
+                ddl_query += f"{col_name} DOUBLE, "
+            else:
+                raise Exception(
+                    f"Unable to create DDL from {str(self.builder.source_table)}, found unexepected type: {col_type}"
+                )
+
+        ddl_query += ") USING DELTA;"
+
+        self.target_interface.query(ddl_query)
+
     def get_column_type(self, cols: list[dict]) -> str:
         """
         Generates SQL select query and a dictionary of column names with their respective lengths/types.

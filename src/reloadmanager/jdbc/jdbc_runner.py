@@ -14,6 +14,10 @@ class JDBCRunner(GenericRunner):
         sql: str = f"{select_query} from {self.builder.source_table}{where_sql}"
         payload: list[tuple] = self.source_interface.safe_query(sql, headers=True)
         self.num_records = len(payload)
+
+        if not self.target_schema:
+            self.create_ddl()
+
         return payload
 
     def append(self, payload: list[tuple], overwrite=False) -> None:
