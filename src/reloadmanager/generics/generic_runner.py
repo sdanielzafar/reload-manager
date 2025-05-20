@@ -39,14 +39,6 @@ class GenericRunner(ABC, LoggingMixin):
 
     @cached_property
     def target_schema(self) -> list[dict[str, str]]:
-        tbl_exists: bool = bool(self.target_interface.query(
-            f"SHOW TABLES IN {self.builder.target_table.catalog_schema} LIKE '{self.builder.target_table.table}';"
-        ))
-
-        if not tbl_exists:
-            self.logger.info(f"TABLE or VIEW '{self.builder.target_table}' not found. Attempting to create DDL..")
-            self.create_ddl()
-
         tbl_info: list[dict[str, str]] = self.target_interface.query(
             f"DESCRIBE TABLE {str(self.builder.target_table)}",
             headers=True
@@ -64,6 +56,12 @@ class GenericRunner(ABC, LoggingMixin):
                 return tbl_info_cln[:i]
 
         return tbl_info_cln
+
+    @property
+    def target_table_exists(self) -> bool:
+        return bool(self.target_interface.query(
+            f"SHOW TABLES IN {self.builder.target_table.catalog_schema} LIKE '{self.builder.target_table.table}';"
+        ))
 
     def create_ddl(self) -> None:
 
@@ -107,22 +105,22 @@ class GenericRunner(ABC, LoggingMixin):
 
         self.target_interface.query(ddl_query_fmt)
 
-    def get_column_type(self, cols: list[dict]) -> str:
+    @property
+    def select_query(self) -> str:
         """
         Generates SQL select query and a dictionary of column names with their respective lengths/types.
-        :param cols: the source table's columns as a list of dict, representing column name: value
-        :return:
+        :return: Select query
         """
 
-        # materialize this here, in case th DDL should be created, because there's np guarantee it will be referenced
-        # in the if condition below.
-        target_schema: list[dict[str, str]] = self.target_schema
+        if not self.target_table_exists:
+            self.logger.info(f"TABLE or VIEW '{self.builder.target_table}' not found. Attempting to create DDL..")
+            self.create_ddl()
 
         # Initialize the select query string
         select_query = "SELECT "
 
         # Iterate over each row in the DataFrame containing column metadata
-        for row in cols:
+        for row in self.source_interface.get_columns():
             col_type: str = row['Type'].strip()
             col_name: str = row['Column Name'].strip()
 
@@ -139,7 +137,7 @@ class GenericRunner(ABC, LoggingMixin):
                 # but some types in Teradata are numeric and don't have these, so we need to handle dynamically
                 if (int(row['Decimal Total Digits']) < 0) | (int(row['Decimal Fractional Digits']) < 0):
                     col_type = next(
-                        field["data_type"] for field in target_schema if field["col_name"] == col_name
+                        field["data_type"] for field in self.target_schema if field["col_name"] == col_name
                     )
                     match col_type:
                         case decimal if "decimal" in decimal:
@@ -152,16 +150,13 @@ class GenericRunner(ABC, LoggingMixin):
                             col_precision = self.type_map.get(other)
                     select_query += f"CAST (\"{col_name}\" AS {col_precision}) AS \"{col_name}\", "
                 else:
-                    select_query += f"CAST (\"{col_name}\" AS DECIMAL({int(row['Decimal Total Digits'])}, {int(row['Decimal Fractional Digits'])})) AS \"{col_name}\", "
+                    select_query += f"CAST (\"{col_name}\" AS DECIMAL({int(row['Decimal Total Digits'])}, " \
+                                    f"{int(row['Decimal Fractional Digits'])})) AS \"{col_name}\", "
             else:
                 select_query += f"\"{col_name}\", "
 
         # Return the select query string, but get rid of last comma
         return select_query[:-2]
-
-    def build_select_query(self):
-        cols: list[dict] = self.source_interface.get_columns()
-        return self.get_column_type(cols)
 
     def truncate_target_table(self) -> None:
         self.logger.info(f"Truncating target table {str(self.builder.target_table)}")

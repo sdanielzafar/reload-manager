@@ -26,7 +26,7 @@ class JDBCRunner(GenericRunner):
 
     def run_snapshot(self):
         try:
-            select_query = self.build_select_query()
+            select_query = self.select_query
             self.logger.info(f"Using query {select_query}")
 
             payload: list[tuple] = self.pull(select_query, self.builder.where_clause)

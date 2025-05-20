@@ -75,7 +75,7 @@ class WriteNOSRunner(GenericRunner):
     def run_snapshot(self, validate_counts: bool = False):
 
         try:
-            select_query = self.build_select_query()
+            select_query = self.select_query
             self.logger.info(f"Using query {select_query}")
 
             s3_path = self.export_nos(select_query, self.builder.where_clause)
