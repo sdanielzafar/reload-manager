@@ -1,4 +1,5 @@
 from dataclasses import astuple
+from textwrap import dedent
 
 from reloadmanager.generics.generic_runner import GenericRunner, RunnerError
 from reloadmanager.writenos.writenos_config_builder import WriteNOSConfigBuilder
@@ -10,13 +11,13 @@ class WriteNOSRunner(GenericRunner):
     def __init__(self, builder: WriteNOSConfigBuilder, source_interface=None, target_interface=None):
         super().__init__(builder, source_interface, target_interface)
 
-    def export_nos(self, select_query: str, where_clause: str = None):
+    def export_nos(self, select_query: str, where_clause: str = None) -> str:
         """
         Export data from Teradata database and table to S3 in Parquet format.
 
         :param select_query: the select query to use
         :param where_clause: an optional where clause to limit the data
-        :return:
+        :return: path where data is placed on cloud storage
         """
 
         where_sql = f" WHERE {where_clause}" if where_clause else ""
@@ -24,17 +25,17 @@ class WriteNOSRunner(GenericRunner):
         self.logger.info(f"Exporting to S3 bucket suffix {self.builder.stage_root_dir}")
 
         s3 = f"/s3/s3.amazonaws.com/{self.builder.aws_bucket}/{self.builder.stage_root_dir}/"
-        query = f'''LOCKING ROW FOR ACCESS
-SELECT *
-FROM WRITE_NOS (
-ON  ({select_query[:-1]} FROM {str(self.builder.source_table)}{where_sql})
-USING
-AUTHORIZATION({self.source_interface.td_user}.authAccess)
-LOCATION('{s3}')
-STOREDAS('PARQUET')
-MAXOBJECTSIZE('16MB')
-COMPRESSION('SNAPPY')
-) AS d'''
+        query = dedent(f'''LOCKING ROW FOR ACCESS
+            SELECT *
+            FROM WRITE_NOS (
+            ON  ({select_query[:-1]} FROM {str(self.builder.source_table)}{where_sql})
+            USING
+            AUTHORIZATION({self.source_interface.td_user}.authAccess)
+            LOCATION('{s3}')
+            STOREDAS('PARQUET')
+            MAXOBJECTSIZE('16MB')
+            COMPRESSION('SNAPPY')
+            ) AS d''')
 
         self.logger.debug(f'Running Write_NOS using query: \n{query}')
 
@@ -54,28 +55,19 @@ COMPRESSION('SNAPPY')
 
     def copy_s3_files_into_delta(self, s3_path: str):
 
-        # for VIEWs, the DDL might not be there
-        if not self.target_schema:
-            self.create_ddl()
-        # if not self.target_schema:
-        #     self.target_interface.spark.read.parquet(s3_path) \
-        #         .limit(0) \
-        #         .write.format("delta") \
-        #         .save(str(self.builder.target_table))
-
         select_statement = ", ".join(
             [f"CAST({field['col_name']} AS {field['data_type']}) AS {field['col_name']}"
              for field in self.target_schema])
 
-        query = f"""
-COPY INTO {str(self.builder.target_table)}
-FROM (
-SELECT {select_statement}
-FROM '{s3_path}'
-)
-FILEFORMAT = PARQUET
-COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
-        """
+        query = dedent(f"""
+            COPY INTO {str(self.builder.target_table)}
+            FROM (
+            SELECT {select_statement}
+            FROM '{s3_path}'
+            )
+            FILEFORMAT = PARQUET
+            COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
+        """)
         self.logger.debug(f"Running COPY INTO query: {query}")
 
         self.target_interface.query(query)

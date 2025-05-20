@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import astuple
+from functools import cached_property
+
 from pyspark.sql.utils import AnalysisException
 
 from reloadmanager.generics.generic_config_builder import GenericConfigBuilder
@@ -35,7 +37,7 @@ class GenericRunner(ABC, LoggingMixin):
             'binary': "BINARY"
         }
 
-    @property
+    @cached_property
     def target_schema(self) -> list[dict[str, str]] | None:
         tbl_info: list[dict[str, str]]
         try:
@@ -46,7 +48,11 @@ class GenericRunner(ABC, LoggingMixin):
         except AnalysisException as e:
             if "TABLE_OR_VIEW_NOT_FOUND" in str(e):
                 print(f"TABLE or VIEW '{self.builder.target_table}' not found. Attempting to create DDL..")
-                return None
+                self.create_ddl()
+                tbl_info = self.target_interface.query(
+                    f"DESCRIBE TABLE {str(self.builder.target_table)}",
+                    headers=True
+                )
             else:
                 raise e
         except Exception:
@@ -89,7 +95,7 @@ class GenericRunner(ABC, LoggingMixin):
                 # for most numeric and decimal columns, we can just cast using precision and scale.
                 # but some types in Teradata are numeric and don't have these, so we need to handle dynamically
                 if (int(row['Decimal Total Digits']) < 0) | (int(row['Decimal Fractional Digits']) < 0):
-                    ddl_query += f"{col_name} VARCHAR(256)), "
+                    ddl_query += f"{col_name} STRING, "
                 else:
                     ddl_query += f"{col_name} DECIMAL({int(row['Decimal Total Digits'])}, {int(row['Decimal Fractional Digits'])})), "
             elif col_type in ('F',):
@@ -130,21 +136,18 @@ class GenericRunner(ABC, LoggingMixin):
                 # for most numeric and decimal columns, we can just cast using precision and scale.
                 # but some types in Teradata are numeric and don't have these, so we need to handle dynamically
                 if (int(row['Decimal Total Digits']) < 0) | (int(row['Decimal Fractional Digits']) < 0):
-                    if self.target_schema:
-                        col_type = next(
-                            field["data_type"] for field in self.target_schema if field["col_name"] == col_name
-                        )
-                        match col_type:
-                            case decimal if "decimal" in decimal:
-                                col_precision = decimal.upper()
-                            case string if "varchar" in string:
-                                col_precision = string.upper()
-                            case char if "char" in char:
-                                col_precision = char.upper()
-                            case other:
-                                col_precision = self.type_map.get(other)
-                    else:
-                        col_precision = "VARCHAR(256)"
+                    col_type = next(
+                        field["data_type"] for field in self.target_schema if field["col_name"] == col_name
+                    )
+                    match col_type:
+                        case decimal if "decimal" in decimal:
+                            col_precision = decimal.upper()
+                        case string if "varchar" in string:
+                            col_precision = string.upper()
+                        case char if "char" in char:
+                            col_precision = char.upper()
+                        case other:
+                            col_precision = self.type_map.get(other)
                     select_query += f"CAST (\"{col_name}\" AS {col_precision}) AS \"{col_name}\" ,"
                 else:
                     select_query += f"CAST (\"{col_name}\" AS DECIMAL({int(row['Decimal Total Digits'])}, {int(row['Decimal Fractional Digits'])})) AS \"{col_name}\" ,"
