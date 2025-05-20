@@ -107,6 +107,8 @@ class GenericRunner(ABC, LoggingMixin):
 
         ddl_query += ") USING DELTA;"
 
+        self.logger.debug(ddl_query)
+
         self.target_interface.query(ddl_query)
 
     def get_column_type(self, cols: list[dict]) -> str:
