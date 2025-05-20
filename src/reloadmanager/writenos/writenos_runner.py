@@ -25,17 +25,17 @@ class WriteNOSRunner(GenericRunner):
         self.logger.info(f"Exporting to S3 bucket suffix {self.builder.stage_root_dir}")
 
         s3 = f"/s3/s3.amazonaws.com/{self.builder.aws_bucket}/{self.builder.stage_root_dir}/"
-        query = dedent(f'''LOCKING ROW FOR ACCESS
-            SELECT *
-            FROM WRITE_NOS (
-            ON  ({select_query[:-1]} FROM {str(self.builder.source_table)}{where_sql})
-            USING
-            AUTHORIZATION({self.source_interface.td_user}.authAccess)
-            LOCATION('{s3}')
-            STOREDAS('PARQUET')
-            MAXOBJECTSIZE('16MB')
-            COMPRESSION('SNAPPY')
-            ) AS d''')
+        query = f'''LOCKING ROW FOR ACCESS
+SELECT *
+FROM WRITE_NOS (
+ON  ({select_query[:-1]} FROM {str(self.builder.source_table)}{where_sql})
+USING
+AUTHORIZATION({self.source_interface.td_user}.authAccess)
+LOCATION('{s3}')
+STOREDAS('PARQUET')
+MAXOBJECTSIZE('16MB')
+COMPRESSION('SNAPPY')
+) AS d;'''
 
         self.logger.debug(f'Running Write_NOS using query: \n{query}')
 
@@ -59,15 +59,15 @@ class WriteNOSRunner(GenericRunner):
             [f"CAST({field['col_name']} AS {field['data_type']}) AS {field['col_name']}"
              for field in self.target_schema])
 
-        query = dedent(f"""
-            COPY INTO {str(self.builder.target_table)}
-            FROM (
-            SELECT {select_statement}
-            FROM '{s3_path}'
-            )
-            FILEFORMAT = PARQUET
-            COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
-        """)
+        query = f"""
+COPY INTO {str(self.builder.target_table)}
+FROM (
+SELECT {select_statement}
+FROM '{s3_path}'
+)
+FILEFORMAT = PARQUET
+COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
+        """
         self.logger.debug(f"Running COPY INTO query: {query}")
 
         self.target_interface.query(query)
