@@ -19,7 +19,7 @@ class TeradataInterface(TeradataClient):
     def get_columns(self) -> list[dict]:
         return self.query(
             # f"(SELECT * FROM DBC.ColumnsV WHERE DatabaseName = '{self.db}' and TableName = '{self.table}')"
-            f"HELP COLUMN {self.db}.{self.table}", headers=True
+            f"HELP COLUMN {self.db}.{self.table}.*", headers=True
         )
 
     def get_indexes(self) -> list[dict]:
