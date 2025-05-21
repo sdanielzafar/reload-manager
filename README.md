@@ -61,7 +61,7 @@ databricks bundle deploy -p [profile]
 ```
 
 ## Technical Details
-![ReloadManager Logo](assets/Reload Manager.png)
+![ReloadManager Logo](assets/Reload_Manager.png)
 
 ### Workflows
 - `Enqueuer`: puts tables into the queue to be reloaded. All project-specific logic should reside here only
