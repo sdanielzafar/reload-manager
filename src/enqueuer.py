@@ -78,7 +78,7 @@ def define_priority_view(p_queue: PriorityQueue) -> None:
     """
 
     sql: str = f"""
-    CREATE OR REPLACE VIEW priorities_v AS (
+    CREATE OR REPLACE VIEW {catalog}.{queue_schema}.priorities_v AS (
         SELECT source_table, target_table, where_clause, event_time, strategy, lock_rows, priority,
         ROW_NUMBER() OVER (ORDER BY priority DESC, event_time ASC) as rank
         FROM (
