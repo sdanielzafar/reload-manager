@@ -41,20 +41,25 @@ targets:
   prod:
     variables:
       catalog:
-        default: 1dp_migration_dev_catalog_3573379518104516
+        default: 1dp_cons_prd
       cluster_id:
-        default: 0416-180448-i5l71jnf
+        default: 0425-215546-o5wol5hp
       validation_jobid:
-        default: null
+        default: 0
+      jdbc_threads:
+        default: 5
+
     mode: production
     workspace:
-      host: https://company.databricks.com
+      host: https://dbc-56809786-e74a.cloud.databricks.com
       root_path: /Shared/reloadmanager/.bundle/${bundle.name}/${bundle.target}
     permissions:
+      - user_name: mrudula.geddam@nxp.com
+        level: CAN_MANAGE
       - user_name: dan.zafar@nxp.com
         level: CAN_MANAGE
     run_as:
-      user_name: dan.zafar@nxp.com
+      service_principal_name: bfc172c9-5687-4832-a650-cee5cd8a5a5a
 
 artifacts:
   default:
