@@ -70,7 +70,7 @@ class GenericRunner(ABC, LoggingMixin):
         # Iterate over each row in the DataFrame containing column metadata
         for row in self.source_interface.get_columns():
             col_type: str = row['Type'].strip()
-            col_name: str = row['Column Name'].strip()
+            col_name: str = row['Column SQL Name'].strip()
 
             # Determine how to handle different column types
             if col_type in ('SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ', 'CV', 'CF', 'CO', 'JN'):
@@ -122,7 +122,7 @@ class GenericRunner(ABC, LoggingMixin):
         # Iterate over each row in the DataFrame containing column metadata
         for row in self.source_interface.get_columns():
             col_type: str = row['Type'].strip()
-            col_name: str = row['Column Name'].strip()
+            col_name: str = row['Column SQL Name'].strip()
 
             # Determine how to handle different column types
             if col_type in ('TS', 'SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ'):
