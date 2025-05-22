@@ -16,8 +16,6 @@ class WriteNOSConfigBuilder(GenericConfigBuilder, SecretMixin):
             lock_rows: bool = True
     ):
         super().__init__(source_table, target_table, where_clause, lock_rows)
-        self.aws_key = self.get_secret("AWS_KEY")
-        self.aws_secret = self.get_secret("AWS_SECRET")
         self.aws_bucket = self.get_secret("AWS_BUCKET")
 
     @cached_property

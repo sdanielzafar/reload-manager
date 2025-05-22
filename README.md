@@ -51,6 +51,7 @@ No more yaml‐string concatenation hell; build config objects in Python and dat
    1. `TD_HOST`: the hostname, e.g. `server.company.com`
    2. `TD_USER`: teradata user to authenticate against
    3. `TD_PASS`: teradata password
+   4. `AWS_BUCKET`: the bucket to use in S3 for WriteNOS 
 4. Create an authorization object between Teradata and S3. Name it `TD_USER`. It will used in WriteNOS like:
 ```sql
 SELECT *
