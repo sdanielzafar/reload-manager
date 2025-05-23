@@ -1,3 +1,5 @@
+import traceback
+
 from reloadmanager.generics.generic_runner import GenericRunner, RunnerError
 from reloadmanager.jdbc.jdbc_config_builder import JDBCConfigBuilder
 
@@ -35,5 +37,10 @@ class JDBCRunner(GenericRunner):
             overwrite: bool = not bool(self.builder.where_clause)
             self.append(payload, overwrite)
 
+        # except Exception as e:
+        #     raise RunnerError(f"JDBC table load failed with error: {repr(e)}")
+
         except Exception as e:
-            raise RunnerError(f"JDBC table load failed with error: {repr(e)}")
+            tb_str = traceback.format_exc()
+            self.logger.error(f"Full traceback:\n{tb_str}")
+            raise RunnerError(f"JDBC table load failed with error: {e.__class__.__name__}: {e}")
