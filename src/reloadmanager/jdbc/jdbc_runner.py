@@ -27,6 +27,8 @@ class JDBCRunner(GenericRunner):
                     return "string"
                 case t if t.lower().startswith("char"):
                     return "string"
+                case t if t.lower().startswith("timestamp"):
+                    return "string"
                 case _:
                     return t
 
