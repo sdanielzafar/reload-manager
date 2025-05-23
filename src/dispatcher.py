@@ -40,7 +40,7 @@ writenos_threads: int = int(dbutils.widgets.get("writenos_threads"))
 jdbc_jobid: int = int(dbutils.widgets.get("jdbc_jobid"))
 jdbc_threads: int = int(dbutils.widgets.get("jdbc_threads"))
 validation_jobid_raw: str = dbutils.widgets.get("validation_jobid")
-validation_jobid: int = validation_jobid_raw if validation_jobid_raw else 0
+validation_jobid: int = int(validation_jobid_raw) if validation_jobid_raw else 0
 source_tz: str = dbutils.widgets.get("source_tz")
 log_level: str = dbutils.widgets.get("log_level")
 
