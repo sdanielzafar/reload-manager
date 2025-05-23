@@ -2,8 +2,6 @@ from abc import ABC, abstractmethod
 from dataclasses import astuple
 from functools import cached_property
 
-from pyspark.sql.utils import AnalysisException
-
 from reloadmanager.generics.generic_config_builder import GenericConfigBuilder
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
 from reloadmanager.clients.teradata_interface import TeradataInterface

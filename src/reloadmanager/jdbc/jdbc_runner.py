@@ -20,7 +20,19 @@ class JDBCRunner(GenericRunner):
         return payload
 
     def append(self, payload: list[tuple], overwrite=False) -> None:
-        self.spark.createDataFrame(payload) \
+
+        def fix_str_types(t: str) -> str:
+            match t:
+                case t if t.lower().startswith("varchar"):
+                    return "string"
+                case t if t.lower().startswith("char"):
+                    return "string"
+                case _:
+                    return t
+
+        schema: str = ", ".join([f"{col['col_name']} {fix_str_types(col['data_type'])}" for col in self.target_schema])
+
+        self.spark.createDataFrame(payload, schema=schema) \
             .selectExpr([f"CAST({f['col_name']} AS {f['data_type']}) AS {f['col_name']}" for f in self.target_schema]) \
             .write.format("delta") \
             .mode("overwrite" if overwrite else "append") \
