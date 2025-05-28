@@ -38,6 +38,8 @@ class JDBCRunner(GenericRunner):
 
         schema: str = ", ".join([f"{col['col_name']} {fix_str_types(col['data_type'])}" for col in self.target_schema])
 
+        self.logger.debug(f"Using payload schema: {schema}")
+
         self.spark.createDataFrame(payload, schema=schema) \
             .selectExpr([f"CAST({f['col_name']} AS {f['data_type']}) AS {f['col_name']}" for f in self.target_schema]) \
             .write.format("delta") \
