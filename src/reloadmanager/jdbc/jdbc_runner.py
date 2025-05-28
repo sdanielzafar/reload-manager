@@ -31,6 +31,8 @@ class JDBCRunner(GenericRunner):
                     return "string"
                 case t if t.lower().startswith("date"):
                     return "string"
+                case t if t.lower().startswith("interval"):
+                    return "string"
                 case _:
                     return t
 
