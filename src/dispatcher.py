@@ -111,7 +111,7 @@ class LoaderThread(Thread, LoggingMixin):
             return None
 
         source_table, target_table, where_clause, lock_rows, event_time = task
-        duration, end_time, n_records, status, error = 0.0, 0.0, 0, 'Failed', ""
+        duration, end_time, n_records, status, error = 0.0, 0.0, 0, 'FAILED', ""
         try:
             self.logger.info(f"Thread {self.thread_id} picked up {source_table}...")
             # reload the table
