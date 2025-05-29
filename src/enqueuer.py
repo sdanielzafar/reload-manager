@@ -69,7 +69,7 @@ def init_watermark(_watermark: EventTime) -> EventTime:
 def define_priority_view(p_queue: PriorityQueue) -> None:
     """
     Define how priorities are calculated, it just needs to expose a rank column. The consumer query looks like this:
-        SELECT source_table, target_table, where_clause, event_time, strategy, lock_rows, priority
+        SELECT source_table, target_table, where_clause, primary_key, event_time, strategy, lock_rows, priority
         FROM {self.catalog_schema}.priorities_v
         WHERE rank = 1
         AND strategy = '{strategy}'
@@ -80,10 +80,10 @@ def define_priority_view(p_queue: PriorityQueue) -> None:
 
     sql: str = f"""
     CREATE OR REPLACE VIEW {catalog}.{queue_schema}.priorities_v AS (
-        SELECT source_table, target_table, where_clause, event_time, strategy, lock_rows, priority,
+        SELECT source_table, target_table, where_clause, primary_key, event_time, strategy, lock_rows, priority,
         ROW_NUMBER() OVER (ORDER BY priority DESC, event_time ASC) as rank
         FROM (
-            SELECT q.source_table, q.target_table, q.where_clause, q.event_time, q.strategy, q.lock_rows, q.status,
+            SELECT q.source_table, q.target_table, q.where_clause, q.primary_key, q.event_time, q.strategy, q.lock_rows, q.status,
             d.min_staleness, d.max_staleness,
             floor(
                 (unix_timestamp(current_timestamp()) - 
@@ -144,6 +144,9 @@ def query_tracking_table(watermark: EventTime, td_client: TeradataClient = td_cl
 class TableAttrRecord:
     source_table: str
     target_table: str
+    ingestion_strategy: str
+    cdc_watermark: str
+    primary_key: str
     strategy: str
     disabled: bool
     priority: int
@@ -155,7 +158,7 @@ class TableAttrRecord:
         if len(line) != len(fields(cls)):
             raise ValueError(f"Input line {line} should have {len(fields(cls))} fields")
 
-        source_table, target_table, strategy, disabled, priority, min_staleness, max_staleness = line
+        source_table, target_table, ingestion_strategy, cdc_watermark, primary_key, strategy, disabled, priority, min_staleness, max_staleness = line
 
         def valid_table(s: str) -> str | None:
             if s:
@@ -175,6 +178,9 @@ class TableAttrRecord:
         return cls(
             valid_table(source_table),
             valid_table(target_table or source_table),
+            ingestion_strategy,
+            cdc_watermark,
+            primary_key,
             strategy,
             disabled,
             int(priority),
@@ -200,23 +206,51 @@ def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
     tables: set[str] = {r.source_table for r in new_tables}
     tbl_metadata: dict[str, TableAttrRecord] = get_table_metadata(tables)
 
-    # augment the new tables with the metadata
-    new_tables_queue: list[QueueRecord] = [
-        QueueRecord(
-            record.source_table,
-            f"{catalog}.{(attrs := tbl_metadata[record.source_table]).target_table}",
-            "",
-            str(record.event_time),
-            None,
-            attrs.strategy,
-            True,
-            'Q',
-            attrs.priority,
-            None
-        ) for record in new_tables
-        # some tables in tracking table are actually CDC, so we only include if they are in the metadata table
-        if record.source_table in tbl_metadata.keys()
-    ]
+    new_tables_queue: list[QueueRecord] = []
+
+    for record in new_tables:
+        if record.source_table not in tbl_metadata.keys():
+            continue
+
+        source_table: str = record.source_table
+        attrs: TableAttrRecord = tbl_metadata[record.source_table]
+        target_table: str = f"{catalog}.{attrs.target_table}"
+        cdc_watermark: str | None = getattr(attrs, "cdc_watermark", None)
+        strategy: str = attrs.strategy
+        where_clause: str = ""
+        try:
+            if cdc_watermark:
+                max_val_result: list[tuple] = dbx_client.query(
+                    f"SELECT MAX({cdc_watermark}) as max_val FROM {target_table}"
+                )
+                max_val: str | None = max_val_result[0][0] if max_val_result and max_val_result[0][0] is not None else None
+
+                if max_val is not None:
+                    where_clause = f"{cdc_watermark} > '{max_val}'"
+                    row_count_result: list[tuple] = td_client.query(
+                        f"SELECT COUNT(1) as row_count FROM {source_table} WHERE {cdc_watermark} > '{max_val}'"
+                    )
+                    row_count: int = int(row_count_result[0][0]) if row_count_result else 0
+
+                    strategy = "JDBC" if row_count < 200000 else "WriteNOS"
+        except Exception as e:
+            logs.logger.warning(f"Could not determine cdc watermarking strategy for {source_table}: {e}")
+        # augment the new tables with the metadata
+        new_tables_queue.append(
+            QueueRecord(
+                source_table,
+                target_table,
+                where_clause,
+                attrs.primary_key,
+                str(record.event_time),
+                None,
+                strategy,
+                True,
+                'Q',
+                attrs.priority,
+                None
+            )
+        )
 
     logs.logger.info(f"Found {len(new_tables_queue)} tables to enqueue.")
     logs.logger.debug(f"{str(new_tables_queue)}")

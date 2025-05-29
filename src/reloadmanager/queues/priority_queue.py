@@ -29,6 +29,7 @@ class PriorityQueue(LoggingMixin):
                 source_table STRING PRIMARY KEY,
                 target_table STRING,
                 where_clause STRING,
+                primary_key STRING,
                 event_time STRING,
                 trigger_time STRING,
                 strategy STRING,
@@ -46,6 +47,7 @@ class PriorityQueue(LoggingMixin):
                     source_table STRING,
                     target_table STRING,
                     where_clause STRING,
+                    primary_key STRING,
                     status STRING,
                     event_time STRING,
                     trigger_time STRING,
@@ -93,7 +95,7 @@ class PriorityQueue(LoggingMixin):
 
         # Find the next eligible row to run, reference the priority VIEW defined by the user
         row: list[tuple] = self.client.query(f"""
-        SELECT source_table, target_table, where_clause, event_time, strategy, lock_rows, priority
+        SELECT source_table, target_table, where_clause, primary_key, event_time, strategy, lock_rows, priority
         FROM {self.catalog_schema}.priorities_v
         WHERE rank = 1
         AND strategy = '{strategy}'
@@ -102,7 +104,7 @@ class PriorityQueue(LoggingMixin):
         if not row:
             return ()
 
-        source_table, target_table, where_clause, event_time, strategy, lock_rows, priority = row[0]
+        source_table, target_table, where_clause, primary_key, event_time, strategy, lock_rows, priority = row[0]
 
         # Mark it as running and update trigger_time
         self.client.query(f"""
@@ -124,7 +126,7 @@ class PriorityQueue(LoggingMixin):
             # Insert as RUNNING if it doesn't exist
             self.client.query(f"""
                 INSERT INTO {self.queue_hist_tbl} (
-                    source_table, target_table, where_clause, status, event_time, trigger_time, strategy, lock_rows, priority
+                    source_table, target_table, where_clause, primary_key, status, event_time, trigger_time, strategy, lock_rows, priority
                 ) VALUES (
                     '{source_table}', '{target_table}', '{where_clause}', 'RUNNING', '{event_time}', '{str(now)}',
                     '{strategy}', {lock_rows}, {priority}
@@ -141,7 +143,7 @@ class PriorityQueue(LoggingMixin):
                   AND event_time = '{event_time}'
             """)
 
-        return source_table, target_table, where_clause, lock_rows, event_time
+        return source_table, target_table, where_clause, primary_key, lock_rows, event_time
 
     def upsert(self, tables: list[QueueRecord]) -> None:
         """
@@ -196,7 +198,7 @@ class PriorityQueue(LoggingMixin):
             raise ValueError(f"Both required columns: {str(req_columns)} not found in input dataframe, only: {input_cols}")
 
         all_columns: set[str] = \
-            {'source_table', 'strategy', 'target_table', 'where_clause', 'event_time', 'lock_rows', 'priority'}
+            {'source_table', 'strategy', 'target_table', 'where_clause', 'primary_key', 'event_time', 'lock_rows', 'priority'}
         if not (forbidden := all_columns.difference(input_cols)):
             raise ValueError(f"Found forbidden column(s) {str(forbidden)}. Columns allowed: {all_columns}")
 
@@ -205,6 +207,8 @@ class PriorityQueue(LoggingMixin):
             tables_sdf = tables_sdf.withColumn('target_table', lit(None).cast("string"))
         if 'where_clause' not in input_cols:
             tables_sdf = tables_sdf.withColumn('where_clause', lit(None).cast("string"))
+        if 'primary_key' not in input_cols:
+            tables_sdf = tables_sdf.withColumn('primary_key', lit(None).cast("string"))
         if 'event_time' not in input_cols:
             tables_sdf = tables_sdf.withColumn('event_time', lit(None).cast("string"))
         if 'lock_rows' not in input_cols:
@@ -233,6 +237,7 @@ class PriorityQueue(LoggingMixin):
         ).whenMatchedUpdate(set={
             "target_table": "s.target_table",
             "where_clause": "s.where_clause",
+            "primary_key": "s.primary_key",
             "event_time": "s.event_time",
             "strategy": "s.strategy",
             "lock_rows": "s.lock_rows",
@@ -241,7 +246,8 @@ class PriorityQueue(LoggingMixin):
         }).whenNotMatchedInsert(values={
             "source_table": "s.source_table",
             "target_table": "s.target_table",
-            "where_clause": "s.where_clause",
+            "where_clause": "s.where_clause",   
+            "primary_key": "s.primary_key",
             "event_time": "s.event_time",
             "strategy": "s.strategy",
             "lock_rows": "s.lock_rows",

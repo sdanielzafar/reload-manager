@@ -6,6 +6,7 @@ class QueueRecord:
     source_table: str
     target_table: str
     where_clause: str
+    primary_key: str
     event_time: str
     trigger_time: str | None
     strategy: str
@@ -38,6 +39,7 @@ class QueueRecord:
             self.source_table,
             self.target_table,
             self.where_clause,
+            self.primary_key,
             self.event_time,
             self.trigger_time,
             self.strategy,
