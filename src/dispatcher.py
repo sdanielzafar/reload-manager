@@ -104,6 +104,12 @@ class LoaderThread(Thread, LoggingMixin):
         if not task and self.strategy == "WriteNOS":
             with self.queue_lock:
                 task: tuple = self.queue.poll("JDBC")
+                if task:
+                    self.queue.client.query(f"""
+                        UPDATE {self.queue.queue_tbl}
+                        SET strategy = 'WriteNOS'
+                        WHERE source_table = '{task[0]}'
+                    """)
 
         if not task:
             self.logger.info(f"Thread {self.thread_id} found no queued tables. Sleeping...")

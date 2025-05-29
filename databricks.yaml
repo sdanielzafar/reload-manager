@@ -17,6 +17,9 @@ variables:
   queue_schema:
     description: The schema to put the queue and queue history in
     default: reloadmanager
+  demographic_table:
+    description: The table with the demographic data required for data migration
+    default: reloadmanager.tr_tables_writenos
   catalog:
     default: null
   cluster_id:
