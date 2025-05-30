@@ -227,13 +227,13 @@ def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
                 max_val: str | None = max_val_result[0][0] if max_val_result and max_val_result[0][0] is not None else None
 
                 if max_val is not None:
-                    where_clause = f"{cdc_watermark} > '{max_val}'"
+                    where_clause: str = f"{cdc_watermark} > '{max_val}'"
                     row_count_result: list[tuple] = td_client.query(
                         f"SELECT COUNT(1) as row_count FROM {source_table} WHERE {cdc_watermark} > '{max_val}'"
                     )
                     row_count: int = int(row_count_result[0][0]) if row_count_result else 0
 
-                    strategy = "JDBC" if row_count < 200000 else "WriteNOS"
+                    strategy: str = "JDBC" if row_count < 200000 else "WriteNOS"
         except Exception as e:
             logs.logger.warning(f"Could not determine cdc watermarking strategy for {source_table}: {e}")
         # augment the new tables with the metadata

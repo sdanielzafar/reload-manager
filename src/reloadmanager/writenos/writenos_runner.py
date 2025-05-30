@@ -10,6 +10,7 @@ class WriteNOSRunner(GenericRunner):
 
     def __init__(self, builder: WriteNOSConfigBuilder, source_interface=None, target_interface=None):
         super().__init__(builder, source_interface, target_interface)
+        self.spark = self.target_interface.spark
 
     def export_nos(self, select_query: str, where_clause: str = None) -> str:
         """
