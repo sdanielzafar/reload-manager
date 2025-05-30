@@ -128,7 +128,7 @@ class PriorityQueue(LoggingMixin):
                 INSERT INTO {self.queue_hist_tbl} (
                     source_table, target_table, where_clause, primary_key, status, event_time, trigger_time, strategy, lock_rows, priority
                 ) VALUES (
-                    '{source_table}', '{target_table}', '{where_clause}', 'RUNNING', '{event_time}', '{str(now)}',
+                    '{source_table}', '{target_table}', '{where_clause}', '{primary_key}', 'RUNNING', '{event_time}', '{str(now)}',
                     '{strategy}', {lock_rows}, {priority}
                 )
             """)
@@ -182,6 +182,7 @@ class PriorityQueue(LoggingMixin):
             - strategy (required)
             - target_table (defaults to {self.catalog}.source_table)
             - where_clause (default "")
+            - primary_key (default "")
             - event_time (default EventTime.now())
             - lock_rows (default True)
             - priority (default 1)
@@ -222,6 +223,7 @@ class PriorityQueue(LoggingMixin):
             when(col("target_table").isNotNull(), col("target_table"))
             .otherwise(concat(lit(f"{self.catalog}."), col("source_table"))).alias("target_table"),
             when(col("where_clause").isNotNull(), col("where_clause")).otherwise(lit("")).alias("where_clause"),
+            when(col("primary_key").isNotNull(), col("primary_key")).otherwise(lit("")).alias("primary_key"),
             when(col("event_time").isNotNull(), col("event_time")).otherwise(lit(now_str)).alias("event_time"),
             col("strategy"),
             when(col("lock_rows").isNotNull(), col("lock_rows")).otherwise(lit(True)).alias("lock_rows"),

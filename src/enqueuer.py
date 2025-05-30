@@ -293,7 +293,7 @@ while True:
     # put them in the queue
     if new_tables:
         queue.upsert(new_tables)
-        logs.logger.info(f"Enqueud new tables")
+        logs.logger.info(f"Enqueued new tables")
 
     # update watermark
     watermark = EventTime(queue.last_load_time())
