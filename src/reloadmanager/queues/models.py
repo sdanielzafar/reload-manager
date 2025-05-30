@@ -51,7 +51,7 @@ class QueueRecord:
         return f[index]
 
     def __len__(self):
-        return 10
+        return 11
 
     def __iter__(self):
         # re-use the existing tuple to avoid dup logic
