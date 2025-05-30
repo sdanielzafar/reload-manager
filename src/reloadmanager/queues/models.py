@@ -16,20 +16,19 @@ class QueueRecord:
     event_time_latest: str | None
 
     def to_sql_values(self) -> str:
-        def lit(v):
+        def lit(v, field_name):
+            if field_name == "where_clause" and v is not None:
+                return v  # Do not wrap in quotes
             match v:
-                case None:              # NULL sentinel
+                case None:
                     return "NULL"
-                case bool() as b:       # booleans → true/false
+                case bool() as b:
                     return "true" if b else "false"
-                case int():             # numerics stay raw
+                case int():
                     return str(v)
-                case str() as s:        # strings: escape quotes
-                    s_rep: str = s.replace("'", "''")
-                    # s_rep: str = s.replace("'", "")
+                case str() as s:
+                    s_rep: str = s.replace("'", "")
                     return f"'{s_rep}'"
-
-        # return "(" + ", ".join(lit(v) for v in iter(self)) + ")"
         return "(" + ", ".join(lit(v, f.name) for f, v in zip(fields(self), iter(self))) + ")"
 
     @classmethod
