@@ -25,10 +25,12 @@ class QueueRecord:
                 case int():             # numerics stay raw
                     return str(v)
                 case str() as s:        # strings: escape quotes
+                    s_rep: str = s.replace("'", "''")
                     # s_rep: str = s.replace("'", "")
-                    return f"'{s}'"
+                    return f"'{s_rep}'"
 
-        return "(" + ", ".join(lit(v) for v in iter(self)) + ")"
+        # return "(" + ", ".join(lit(v) for v in iter(self)) + ")"
+        return "(" + ", ".join(lit(v, f.name) for f, v in zip(fields(self), iter(self))) + ")"
 
     @classmethod
     def fields_str(cls) -> str:
