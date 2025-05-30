@@ -26,8 +26,7 @@ class QueueRecord:
                     return str(v)
                 case str() as s:        # strings: escape quotes
                     # s_rep: str = s.replace("'", "")
-                    s_rep: str = s.replace("'", "''")
-                    return f"'{s_rep}'"
+                    return f"'{s}'"
 
         return "(" + ", ".join(lit(v) for v in iter(self)) + ")"
 
