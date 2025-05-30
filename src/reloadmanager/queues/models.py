@@ -27,7 +27,7 @@ class QueueRecord:
                 case int():
                     return str(v)
                 case str() as s:
-                    s_rep: str = s.replace("'", "")
+                    s_rep: str = s.replace("'", "''")
                     return f"'{s_rep}'"
         return "(" + ", ".join(lit(v, f.name) for f, v in zip(fields(self), iter(self))) + ")"
 
