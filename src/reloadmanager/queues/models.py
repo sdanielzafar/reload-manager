@@ -17,8 +17,8 @@ class QueueRecord:
 
     def to_sql_values(self) -> str:
         def lit(f, v):
-            # if f.name == "where_clause" and v is not None:
-            #     return v  # Don't quote SQL clauses
+            if f.name == "where_clause" and v is not None:
+                return f"'{v}'"  # Don't quote SQL clauses
             match v:
                 case None:
                     return "NULL"
@@ -27,7 +27,7 @@ class QueueRecord:
                 case int():
                     return str(v)
                 case str() as s:
-                    s_rep: str = s.replace("'", "''")  # or replace("'", "''") for SQL escaping
+                    s_rep: str = s.replace("'", "")  # or replace("'", "''") for SQL escaping
                     return f"'{s_rep}'"
 
         return "(" + ", ".join(lit(f, v) for f, v in zip(fields(self), iter(self))) + ")"
