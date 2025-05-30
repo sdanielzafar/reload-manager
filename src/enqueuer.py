@@ -227,7 +227,7 @@ def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
                 max_val: str | None = max_val_result[0][0] if max_val_result and max_val_result[0][0] is not None else None
 
                 if max_val is not None:
-                    where_clause = f"{cdc_watermark} > \\\\\\'{max_val}\\\\\\'"
+                    where_clause = f"{cdc_watermark} > '{max_val}'"
                     row_count_result: list[tuple] = td_client.query(
                         f"SELECT COUNT(1) as row_count FROM {source_table} WHERE {cdc_watermark} > '{max_val}'"
                     )

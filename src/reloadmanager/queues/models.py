@@ -18,7 +18,8 @@ class QueueRecord:
     def to_sql_values(self) -> str:
         def lit(f, v):
             if f.name == "where_clause" and v is not None:
-                return f"'{v}'"  # Don't quote SQL clauses
+                v_rep: str = v.replace("'", "\\'")
+                return f"'{v_rep}'"  # Don't quote SQL clauses
             match v:
                 case None:
                     return "NULL"

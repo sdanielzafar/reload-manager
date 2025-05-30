@@ -128,7 +128,7 @@ class PriorityQueue(LoggingMixin):
                 INSERT INTO {self.queue_hist_tbl} (
                     source_table, target_table, where_clause, primary_key, status, event_time, trigger_time, strategy, lock_rows, priority
                 ) VALUES (
-                    '{source_table}', '{target_table}', '{where_clause}', '{primary_key}', 'RUNNING', '{event_time}', '{str(now)}',
+                    '{source_table}', '{target_table}', "{where_clause}", '{primary_key}', 'RUNNING', '{event_time}', '{str(now)}',
                     '{strategy}', {lock_rows}, {priority}
                 )
             """)
