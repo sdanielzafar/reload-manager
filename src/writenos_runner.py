@@ -17,11 +17,13 @@ from reloadmanager.table_loader.table_reloader import TableReloader
 dbutils.widgets.text("source_table", "")
 dbutils.widgets.text("target_table", "")
 dbutils.widgets.text("where_clause", "")
+dbutils.widgets.text("primary_key", "")
 dbutils.widgets.text("log_level", "")
 
 source_table: str = dbutils.widgets.get("source_table")
 target_table: str = dbutils.widgets.get("target_table")
 where_clause: str = dbutils.widgets.get("where_clause")
+primary_key: str = dbutils.widgets.get("primary_key")
 log_level: str = dbutils.widgets.get("log_level")
 
 logs = LoggingMixin()
@@ -35,6 +37,7 @@ reloader: TableReloader = TableReloader(
     source_table=source_table,
     target_table=target_table,
     where_clause=where_clause,
+    primary_key=primary_key,
     strategy="WriteNOS",
     lock_rows=True
 )

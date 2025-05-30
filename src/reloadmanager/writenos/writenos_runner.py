@@ -64,17 +64,45 @@ class WriteNOSRunner(GenericRunner):
              for field in self.target_schema])
 
         query = f"""
-COPY INTO {str(self.builder.target_table)}
-FROM (
-SELECT {select_statement}
-FROM '{s3_path}'
-)
-FILEFORMAT = PARQUET
-COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
+            COPY INTO {str(self.builder.target_table)}
+            FROM (
+            SELECT {select_statement}
+            FROM '{s3_path}'
+            )
+            FILEFORMAT = PARQUET
+            COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
         """
         self.logger.debug(f"Running COPY INTO query: {query}")
 
         self.target_interface.query(query)
+
+    def merge(self, s3_path: str, primary_key: str) -> None:
+        spark_df = self.spark.read.parquet(s3_path)
+        spark_df.createOrReplaceTempView("payload_temp_view")
+        
+        target_table: str = self.builder.target_table
+        pk_column_list: list[str] = [col.strip() for col in primary_key.split(",")]
+
+        pk_conditions: str = " AND ".join([f"target.{col} = source.{col}" for col in pk_column_list])
+        update_set: str = ", ".join([f"{col} = source.{col}" for col in spark_df.columns if col not in pk_column_list])
+        insert_cols: str = ", ".join(spark_df.columns)
+        insert_vals: str = ", ".join([f"source.{col}" for col in spark_df.columns])
+
+        merge_sql: str = f"""
+            MERGE INTO {target_table} AS target
+            USING payload_temp_view AS source
+            ON {pk_conditions}
+            WHEN MATCHED THEN
+                UPDATE SET {update_set}
+            WHEN NOT MATCHED THEN
+                INSERT ({insert_cols})
+                VALUES ({insert_vals})
+        """
+
+        self.logger.info(f"Running MERGE SQL: {merge_sql}")
+
+        self.target_interface.query(merge_sql)
+        
 
     def run_snapshot(self, validate_counts: bool = False):
 
@@ -91,7 +119,11 @@ COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
 
             self.logger.info(
                 f"Importing {self.num_records} rows from {s3_path} to table {str(self.builder.target_table)}")
-            self.copy_s3_files_into_delta(s3_path)
+            
+            if self.builder.primary_key:
+                self.merge(s3_path, self.builder.primary_key)
+            else:
+                self.copy_s3_files_into_delta(s3_path)
 
             if validate_counts:
                 rows_inserted = self.target_table_count() - init_count

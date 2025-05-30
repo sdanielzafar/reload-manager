@@ -19,5 +19,7 @@ resources:
           default: ""
         - name: where_clause
           default: ""
+        - name: primary_key
+          default: ""
         - name: log_level
           default: "debug"

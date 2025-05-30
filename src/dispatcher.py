@@ -115,13 +115,13 @@ class LoaderThread(Thread, LoggingMixin):
             self.logger.info(f"Thread {self.thread_id} found no queued tables. Sleeping...")
             time.sleep(60)
             return None
-
-        source_table, target_table, where_clause, lock_rows, event_time = task
+        
+        source_table, target_table, where_clause, primary_key, lock_rows, event_time = task
         duration, end_time, n_records, status, error = 0.0, 0.0, 0, 'FAILED', ""
         try:
             self.logger.info(f"Thread {self.thread_id} picked up {source_table}...")
             # reload the table
-            result: ReportRecord = self.reload_table(source_table, target_table, where_clause, lock_rows)
+            result: ReportRecord = self.reload_table(source_table, target_table, where_clause, primary_key, lock_rows)
 
             self.logger.info(f"Thread {self.thread_id} reloaded table '{source_table}'")
             duration, end_time, n_records, status, error = \
@@ -151,11 +151,12 @@ class LoaderThread(Thread, LoggingMixin):
             with LogLock.lock:
                 traceback.print_exc()
 
-    def reload_table(self, source_table: str, target_table: str, where_clause: str, lock_rows: bool) -> ReportRecord:
+    def reload_table(self, source_table: str, target_table: str, where_clause: str, primary_key: str, lock_rows: bool) -> ReportRecord:
         params: dict[str, str] = {
             "source_table": source_table,
             "target_table": target_table,
             "where_clause": where_clause,
+            "primary_key": primary_key,
             "lock_rows": lock_rows
         }
         output = dbx_client.trigger_job(self.reload_job_id, params, get_output=True)

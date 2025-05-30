@@ -216,6 +216,7 @@ def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
         attrs: TableAttrRecord = tbl_metadata[record.source_table]
         target_table: str = f"{catalog}.{attrs.target_table}"
         cdc_watermark: str | None = getattr(attrs, "cdc_watermark", None)
+        primary_key: str | None = getattr(attrs, "primary_key", None)
         strategy: str = attrs.strategy
         where_clause: str = ""
         try:
@@ -241,7 +242,7 @@ def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
                 source_table,
                 target_table,
                 where_clause,
-                attrs.primary_key,
+                primary_key,
                 str(record.event_time),
                 None,
                 strategy,
