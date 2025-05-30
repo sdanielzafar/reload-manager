@@ -16,9 +16,9 @@ class QueueRecord:
     event_time_latest: str | None
 
     def to_sql_values(self) -> str:
-        def lit(v, field_name):
-            if field_name == "where_clause" and v is not None:
-                return v  # Do not wrap in quotes
+        def lit(f, v):
+            if f.name == "where_clause" and v is not None:
+                return v  # Don't quote SQL clauses
             match v:
                 case None:
                     return "NULL"
@@ -27,9 +27,10 @@ class QueueRecord:
                 case int():
                     return str(v)
                 case str() as s:
-                    s_rep: str = s.replace("'", "''")
+                    s_rep: str = s.replace("'", "")  # or replace("'", "''") for SQL escaping
                     return f"'{s_rep}'"
-        return "(" + ", ".join(lit(v, f.name) for f, v in zip(fields(self), iter(self))) + ")"
+
+        return "(" + ", ".join(lit(f, v) for f, v in zip(fields(self), iter(self))) + ")"
 
     @classmethod
     def fields_str(cls) -> str:

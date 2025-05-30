@@ -222,7 +222,7 @@ def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
         try:
             if cdc_watermark:
                 max_val_result: list[tuple] = dbx_client.query(
-                    f"SELECT MAX({cdc_watermark}) as max_val FROM {target_table}"
+                    f"SELECT CAST(MAX({cdc_watermark}) as string) as max_val FROM {target_table}"
                 )
                 max_val: str | None = max_val_result[0][0] if max_val_result and max_val_result[0][0] is not None else None
 
