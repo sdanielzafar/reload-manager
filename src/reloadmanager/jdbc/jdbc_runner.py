@@ -21,8 +21,8 @@ class JDBCRunner(GenericRunner):
     
     @staticmethod
     def fix_str_types(t: str) -> str:
-        match t.lower():
-            case t if t.startswith(("varchar", "char", "timestamp", "date", "interval")):
+        match t:
+            case t if t.lower().startswith(("varchar", "char", "timestamp", "date", "interval")):
                 return "string"
             case _:
                 return t
