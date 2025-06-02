@@ -81,7 +81,7 @@ class WriteNOSRunner(GenericRunner):
         spark_df = self.spark.read.parquet(s3_path)
         spark_df.createOrReplaceTempView("payload_temp_view")
         
-        target_table: str = self.builder.target_table
+        target_table: str = str(self.builder.target_table)
         pk_column_list: list[str] = [col.strip() for col in primary_key.split(",")]
 
         pk_conditions: str = " AND ".join([f"target.{col} = source.{col}" for col in pk_column_list])
@@ -103,7 +103,6 @@ class WriteNOSRunner(GenericRunner):
         self.logger.info(f"Running MERGE SQL: {merge_sql}")
 
         self.target_interface.query(merge_sql)
-        
 
     def run_snapshot(self, validate_counts: bool = False):
 
