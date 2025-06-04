@@ -61,8 +61,6 @@ class WriteNOSRunner(GenericRunner):
     def append(self, s3_path: str, overwrite: bool = False):
         if not overwrite:
             self.delete_from_target_table()
-        else:
-            self.truncate_target_table()
 
         select_statement = ", ".join(
             [f"CAST({field['col_name']} AS {field['data_type']}) AS {field['col_name']}"
@@ -88,6 +86,9 @@ class WriteNOSRunner(GenericRunner):
 
             s3_path = self.export_nos(select_query, self.builder.where_clause)
 
+            if not self.builder.where_clause:
+                self.truncate_target_table()
+            
             if validate_counts:
                 init_count = self.target_table_count()
 
