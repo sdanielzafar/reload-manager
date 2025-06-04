@@ -58,13 +58,17 @@ class WriteNOSRunner(GenericRunner):
         result: list[tuple] = self.target_interface.query(f"SELECT COUNT(1) FROM `{catalog}`.{schema}.{table}")
         return int(result[0][0])
 
-    def copy_s3_files_into_delta(self, s3_path: str):
+    def append(self, s3_path: str, overwrite: bool = False):
+        if not overwrite:
+            self.delete_from_target_table()
+        else:
+            self.truncate_target_table()
 
         select_statement = ", ".join(
             [f"CAST({field['col_name']} AS {field['data_type']}) AS {field['col_name']}"
              for field in self.target_schema])
 
-        query = f"""
+        query = dedent(f"""
             COPY INTO {str(self.builder.target_table)}
             FROM (
             SELECT {select_statement}
@@ -72,37 +76,10 @@ class WriteNOSRunner(GenericRunner):
             )
             FILEFORMAT = PARQUET
             COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
-        """
+        """)
         self.logger.debug(f"Running COPY INTO query: {query}")
 
         self.target_interface.query(query)
-
-    def merge(self, s3_path: str, primary_key: str) -> None:
-        spark_df = self.spark.read.parquet(s3_path)
-        spark_df.createOrReplaceTempView("payload_temp_view")
-        
-        target_table: str = str(self.builder.target_table)
-        pk_column_list: list[str] = [col.strip() for col in primary_key.split(",")]
-
-        pk_conditions: str = " AND ".join([f"target.{col} = source.{col}" for col in pk_column_list])
-        update_set: str = ", ".join([f"{col} = source.{col}" for col in spark_df.columns if col not in pk_column_list])
-        insert_cols: str = ", ".join(spark_df.columns)
-        insert_vals: str = ", ".join([f"source.{col}" for col in spark_df.columns])
-
-        merge_sql: str = f"""
-            MERGE INTO {target_table} AS target
-            USING payload_temp_view AS source
-            ON {pk_conditions}
-            WHEN MATCHED THEN
-                UPDATE SET {update_set}
-            WHEN NOT MATCHED THEN
-                INSERT ({insert_cols})
-                VALUES ({insert_vals})
-        """
-
-        self.logger.info(f"Running MERGE SQL: {merge_sql}")
-
-        self.target_interface.query(merge_sql)
 
     def run_snapshot(self, validate_counts: bool = False):
 
@@ -111,9 +88,6 @@ class WriteNOSRunner(GenericRunner):
 
             s3_path = self.export_nos(select_query, self.builder.where_clause)
 
-            if not self.builder.where_clause:
-                self.truncate_target_table()
-
             if validate_counts:
                 init_count = self.target_table_count()
 
@@ -121,9 +95,13 @@ class WriteNOSRunner(GenericRunner):
                 f"Importing {self.num_records} rows from {s3_path} to table {str(self.builder.target_table)}")
             
             if self.builder.primary_key:
-                self.merge(s3_path, self.builder.primary_key)
+                self.spark_df = self.spark.read.parquet(s3_path)
+                self.spark_df.createOrReplaceTempView("payload_temp_view")
+                self.merge()
             else:
-                self.copy_s3_files_into_delta(s3_path)
+                # if there's no where clause, we can overwrite
+                overwrite: bool = not bool(self.builder.where_clause)
+                self.append(s3_path, overwrite)
 
             if validate_counts:
                 rows_inserted = self.target_table_count() - init_count

@@ -202,6 +202,25 @@ def get_table_metadata(tables: set[str]) -> dict[str, TableAttrRecord]:
 
 # COMMAND ----------
 
+def update_strategy(source_table: str, target_table: str, cdc_watermark: str, strategy: str, cutoff: int = 200000) -> tuple[str, str]:
+    if cdc_watermark:
+        max_val_result: list[tuple] = dbx_client.query(
+            f"SELECT CAST(MAX({cdc_watermark}) as string) as max_val FROM {target_table}"
+        )
+        max_val: str | None = max_val_result[0][0] if max_val_result and max_val_result[0][0] is not None else None
+
+        if max_val is not None:
+            where_clause: str = f"{cdc_watermark} >= '{max_val}'"
+            row_count_result: list[tuple] = td_client.query(
+                f"SELECT COUNT(1) as row_count FROM {source_table} WHERE {cdc_watermark} >= '{max_val}'"
+            )
+            row_count: int = int(row_count_result[0][0]) if row_count_result else 0
+
+            strategy: str = "JDBC" if row_count < cutoff else "WriteNOS"
+            return strategy, where_clause
+    return strategy, ""
+
+
 def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
     tables: set[str] = {r.source_table for r in new_tables}
     tbl_metadata: dict[str, TableAttrRecord] = get_table_metadata(tables)
@@ -216,33 +235,16 @@ def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
         attrs: TableAttrRecord = tbl_metadata[record.source_table]
         target_table: str = f"{catalog}.{attrs.target_table}"
         cdc_watermark: str | None = getattr(attrs, "cdc_watermark", None)
-        primary_key: str | None = getattr(attrs, "primary_key", None)
-        strategy: str = attrs.strategy
-        where_clause: str = ""
-        try:
-            if cdc_watermark:
-                max_val_result: list[tuple] = dbx_client.query(
-                    f"SELECT CAST(MAX({cdc_watermark}) as string) as max_val FROM {target_table}"
-                )
-                max_val: str | None = max_val_result[0][0] if max_val_result and max_val_result[0][0] is not None else None
+        
+        strategy, where_clause = update_strategy(source_table, target_table, cdc_watermark, attrs.strategy)
 
-                if max_val is not None:
-                    where_clause: str = f"{cdc_watermark} > '{max_val}'"
-                    row_count_result: list[tuple] = td_client.query(
-                        f"SELECT COUNT(1) as row_count FROM {source_table} WHERE {cdc_watermark} > '{max_val}'"
-                    )
-                    row_count: int = int(row_count_result[0][0]) if row_count_result else 0
-
-                    strategy: str = "JDBC" if row_count < 200000 else "WriteNOS"
-        except Exception as e:
-            logs.logger.warning(f"Could not determine cdc watermarking strategy for {source_table}: {e}")
         # augment the new tables with the metadata
         new_tables_queue.append(
             QueueRecord(
                 source_table,
                 target_table,
                 where_clause,
-                primary_key,
+                getattr(attrs, "primary_key", None),
                 str(record.event_time),
                 None,
                 strategy,
