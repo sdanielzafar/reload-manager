@@ -58,7 +58,7 @@ class WriteNOSRunner(GenericRunner):
         result: list[tuple] = self.target_interface.query(f"SELECT COUNT(1) FROM `{catalog}`.{schema}.{table}")
         return int(result[0][0])
 
-    def append(self, s3_path: str, overwrite: bool = False):
+    def append(self, payload: str, overwrite: bool = False):
         if not overwrite:
             self.delete_from_target_table()
         else:
@@ -72,7 +72,7 @@ class WriteNOSRunner(GenericRunner):
             COPY INTO {str(self.builder.target_table)}
             FROM (
             SELECT {select_statement}
-            FROM '{s3_path}'
+            FROM '{payload}'
             )
             FILEFORMAT = PARQUET
             COPY_OPTIONS ('force'='true','mergeSchema' = 'false')

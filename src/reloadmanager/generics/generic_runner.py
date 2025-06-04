@@ -21,7 +21,6 @@ class GenericRunner(ABC, LoggingMixin):
         self.num_records: int = 0
         self.spark_df: DataFrame | None = None
 
-
     @property
     def type_map(self):
         return {
@@ -163,13 +162,14 @@ class GenericRunner(ABC, LoggingMixin):
         self.logger.info(f"Truncating target table {str(self.builder.target_table)}")
         catalog, schema, table = astuple(self.builder.target_table)
         self.target_interface.query(f"TRUNCATE TABLE `{catalog}`.{schema}.{table}")
-    
+
     def merge(self) -> None:
-        target_table: str = self.builder.target_table
+        target_table: str = str(self.builder.target_table)
         pk_column_list: list[str] = [col.strip() for col in self.builder.primary_key.split(",")]
 
         pk_conditions: str = " AND ".join([f"target.{col} = source.{col}" for col in pk_column_list])
-        update_set: str = ", ".join([f"{col} = source.{col}" for col in self.spark_df.columns if col not in pk_column_list])
+        update_set: str = ", ".join(
+            [f"{col} = source.{col}" for col in self.spark_df.columns if col not in pk_column_list])
         insert_cols: str = ", ".join(self.spark_df.columns)
         insert_vals: str = ", ".join([f"source.{col}" for col in self.spark_df.columns])
 
@@ -194,6 +194,10 @@ class GenericRunner(ABC, LoggingMixin):
         """
         self.logger.info(f"Running DELETE SQL: {delete_sql}")
         self.target_interface.query(delete_sql)
+
+    @abstractmethod
+    def append(self, payload: str, overwrite: bool = False):
+        pass
 
     @abstractmethod
     def run_snapshot(self):

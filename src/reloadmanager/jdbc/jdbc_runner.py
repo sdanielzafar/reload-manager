@@ -18,7 +18,7 @@ class JDBCRunner(GenericRunner):
         self.num_records = len(payload)
 
         return payload
-    
+
     @staticmethod
     def fix_str_types(t: str) -> str:
         match t:
@@ -31,7 +31,8 @@ class JDBCRunner(GenericRunner):
         if not overwrite:
             self.delete_from_target_table()
 
-        schema: str = ", ".join([f"{col['col_name']} {self.fix_str_types(col['data_type'])}" for col in self.target_schema])
+        schema: str = ", ".join(
+            [f"{col['col_name']} {self.fix_str_types(col['data_type'])}" for col in self.target_schema])
         self.logger.debug(f"Using payload schema: {schema}")
 
         self.spark.createDataFrame(payload, schema=schema) \
@@ -39,7 +40,6 @@ class JDBCRunner(GenericRunner):
             .write.format("delta") \
             .mode("overwrite" if overwrite else "append") \
             .saveAsTable(f"{self.builder.target_table}")
-        
 
     def run_snapshot(self):
         try:
@@ -49,7 +49,8 @@ class JDBCRunner(GenericRunner):
             payload: list[tuple] = self.pull(select_query, self.builder.where_clause)
 
             if self.builder.primary_key:
-                schema: str = ", ".join(f"{col['col_name']} {self.fix_str_types(col['data_type'])}" for col in self.target_schema)
+                schema: str = ", ".join(
+                    f"{col['col_name']} {self.fix_str_types(col['data_type'])}" for col in self.target_schema)
                 self.spark_df = self.spark.createDataFrame(payload, schema=schema)
                 self.spark_df.createOrReplaceTempView("payload_temp_view")
                 self.merge()
