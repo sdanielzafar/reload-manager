@@ -20,7 +20,6 @@ class GenericRunner(ABC, LoggingMixin):
             else DatabricksRuntimeClient()
         self.num_records: int = 0
         self.spark_df: DataFrame | None = None
-        self.primary_key: str | None = None
 
 
     @property
