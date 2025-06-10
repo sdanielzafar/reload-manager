@@ -13,9 +13,10 @@ class JDBCConfigBuilder(GenericConfigBuilder, SecretMixin):
             target_table: str,
             where_clause: str = None,
             primary_key: str = None,
-            lock_rows: bool = True
+            lock_rows: bool = True,
+            create_table_if_not_exists: bool = False
     ):
-        super().__init__(source_table, target_table, where_clause, primary_key, lock_rows)
+        super().__init__(source_table, target_table, where_clause, primary_key, lock_rows, create_table_if_not_exists)
 
     @cached_property
     def id(self) -> str:

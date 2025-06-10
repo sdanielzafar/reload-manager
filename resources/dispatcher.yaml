@@ -30,3 +30,5 @@ resources:
           default: ${var.teradata_tz}
         - name: log_level
           default: info
+        - name: create_table_if_not_exists
+          default: False

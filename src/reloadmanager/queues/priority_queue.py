@@ -97,7 +97,12 @@ class PriorityQueue(LoggingMixin):
         row: list[tuple] = self.client.query(f"""
         SELECT source_table, target_table, where_clause, primary_key, event_time, strategy, lock_rows, priority
         FROM {self.catalog_schema}.priorities_v
-        WHERE rank = 1
+        WHERE rank = (
+            SELECT MIN(rank)
+            FROM {self.catalog_schema}.priorities_v
+            WHERE strategy = '{strategy}'
+            AND rank >= 1
+        )
         AND strategy = '{strategy}'
         """)
 

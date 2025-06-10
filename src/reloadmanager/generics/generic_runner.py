@@ -112,7 +112,7 @@ class GenericRunner(ABC, LoggingMixin):
         :return: Select query
         """
 
-        if not self.target_table_exists:
+        if self.builder.create_table_if_not_exists:
             self.logger.info(f"TABLE or VIEW '{self.builder.target_table}' not found. Attempting to create DDL..")
             self.create_ddl()
 

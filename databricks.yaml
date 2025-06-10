@@ -36,6 +36,8 @@ targets:
         default: 0416-180448-i5l71jnf
       validation_jobid:
         default: 0
+      jdbc_threads:
+        default: 5
     mode: development
     default: true
     workspace:
