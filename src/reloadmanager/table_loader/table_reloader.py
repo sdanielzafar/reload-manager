@@ -15,14 +15,17 @@ class TableReloader(LoggingMixin):
                  source_table: str,
                  target_table: str,
                  where_clause: str,
+                 primary_key: str,
                  strategy: str,
-                 lock_rows: bool):
+                 lock_rows: bool,
+                 create_table_if_not_exists: bool):
         self.source_table: str = source_table
         self.target_table: str = target_table
         self.where_clause: str = where_clause
+        self.primary_key: str = primary_key
         self.strategy: str = strategy.lower()
         self.lock_rows: bool = lock_rows
-
+        self.create_table_if_not_exists: bool = create_table_if_not_exists
     @cached_property
     def builder(self) -> WriteNOSConfigBuilder | JDBCConfigBuilder:
         match self.strategy:
@@ -31,14 +34,18 @@ class TableReloader(LoggingMixin):
                     source_table=self.source_table,
                     target_table=self.target_table,
                     where_clause=self.where_clause,
-                    lock_rows=self.lock_rows
+                    primary_key=self.primary_key,
+                    lock_rows=self.lock_rows,
+                    create_table_if_not_exists=self.create_table_if_not_exists
                 )
             case "jdbc":
                 return JDBCConfigBuilder(
                     source_table=self.source_table,
                     target_table=self.target_table,
                     where_clause=self.where_clause,
-                    lock_rows=self.lock_rows
+                    primary_key=self.primary_key,
+                    lock_rows=self.lock_rows,
+                    create_table_if_not_exists=self.create_table_if_not_exists
                 )
             case other:
                 raise NotImplementedError(f"Strategy: '{other}' has not been implemented")

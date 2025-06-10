@@ -19,20 +19,21 @@ class JDBCRunner(GenericRunner):
 
         return payload
 
+    @staticmethod
+    def fix_str_types(t: str) -> str:
+        match t:
+            case t if t.lower().startswith(("varchar", "char", "timestamp", "date", "interval")):
+                return "string"
+            case _:
+                return t
+
     def append(self, payload: list[tuple], overwrite=False) -> None:
+        if not overwrite:
+            self.delete_from_target_table()
 
-        def fix_str_types(t: str) -> str:
-            match t:
-                case t if t.lower().startswith("varchar"):
-                    return "string"
-                case t if t.lower().startswith("char"):
-                    return "string"
-                case t if t.lower().startswith("timestamp"):
-                    return "string"
-                case _:
-                    return t
-
-        schema: str = ", ".join([f"{col['col_name']} {fix_str_types(col['data_type'])}" for col in self.target_schema])
+        schema: str = ", ".join(
+            [f"{col['col_name']} {self.fix_str_types(col['data_type'])}" for col in self.target_schema])
+        self.logger.debug(f"Using payload schema: {schema}")
 
         self.spark.createDataFrame(payload, schema=schema) \
             .selectExpr([f"CAST({f['col_name']} AS {f['data_type']}) AS {f['col_name']}" for f in self.target_schema]) \
@@ -47,9 +48,16 @@ class JDBCRunner(GenericRunner):
 
             payload: list[tuple] = self.pull(select_query, self.builder.where_clause)
 
-            # if there's no where clause, we can overwrite
-            overwrite: bool = not bool(self.builder.where_clause)
-            self.append(payload, overwrite)
+            if self.builder.primary_key:
+                schema: str = ", ".join(
+                    f"{col['col_name']} {self.fix_str_types(col['data_type'])}" for col in self.target_schema)
+                self.spark_df = self.spark.createDataFrame(payload, schema=schema)
+                self.spark_df.createOrReplaceTempView("payload_temp_view")
+                self.merge()
+            else:
+                # if there's no where clause, we can overwrite
+                overwrite: bool = not bool(self.builder.where_clause)
+                self.append(payload, overwrite)
 
         # except Exception as e:
         #     raise RunnerError(f"JDBC table load failed with error: {repr(e)}")

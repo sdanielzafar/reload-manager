@@ -7,6 +7,8 @@ resources:
           notebook_task:
             notebook_path: ../src/enqueuer.py
           existing_cluster_id: ${var.cluster_id}
+          max_retries: 3
+          min_retry_interval_millis: 600000
           libraries:
             - whl: ../dist/*.whl
       parameters:
@@ -14,6 +16,8 @@ resources:
           default: ${var.catalog}
         - name: queue_schema
           default: ${var.queue_schema}
+        - name: demographic_table
+          default: ${var.demographic_table}
         - name: starting_watermark
           default: "{{job.trigger.time.timestamp_ms}}"
         - name: reset_queue

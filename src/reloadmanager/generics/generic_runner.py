@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import astuple
 from functools import cached_property
+from pyspark.sql import DataFrame
 
 from reloadmanager.generics.generic_config_builder import GenericConfigBuilder
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
@@ -18,6 +19,7 @@ class GenericRunner(ABC, LoggingMixin):
         self.target_interface: DatabricksRuntimeClient = target_interface if target_interface \
             else DatabricksRuntimeClient()
         self.num_records: int = 0
+        self.spark_df: DataFrame | None = None
 
     @property
     def type_map(self):
@@ -68,7 +70,7 @@ class GenericRunner(ABC, LoggingMixin):
         # Iterate over each row in the DataFrame containing column metadata
         for row in self.source_interface.get_columns():
             col_type: str = row['Type'].strip()
-            col_name: str = row['Column SQL Name'].strip()
+            col_name: str = row['Column Dictionary Name'].strip()
 
             # Determine how to handle different column types
             if col_type in ('SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ', 'CV', 'CF', 'CO', 'JN'):
@@ -110,7 +112,7 @@ class GenericRunner(ABC, LoggingMixin):
         :return: Select query
         """
 
-        if not self.target_table_exists:
+        if self.builder.create_table_if_not_exists:
             self.logger.info(f"TABLE or VIEW '{self.builder.target_table}' not found. Attempting to create DDL..")
             self.create_ddl()
 
@@ -120,7 +122,7 @@ class GenericRunner(ABC, LoggingMixin):
         # Iterate over each row in the DataFrame containing column metadata
         for row in self.source_interface.get_columns():
             col_type: str = row['Type'].strip()
-            col_name: str = row['Column SQL Name'].strip()
+            col_name: str = row['Column Dictionary Name'].strip()
 
             # Determine how to handle different column types
             if col_type in ('TS', 'SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ'):
@@ -160,6 +162,42 @@ class GenericRunner(ABC, LoggingMixin):
         self.logger.info(f"Truncating target table {str(self.builder.target_table)}")
         catalog, schema, table = astuple(self.builder.target_table)
         self.target_interface.query(f"TRUNCATE TABLE `{catalog}`.{schema}.{table}")
+
+    def merge(self) -> None:
+        target_table: str = str(self.builder.target_table)
+        pk_column_list: list[str] = [col.strip() for col in self.builder.primary_key.split(",")]
+
+        pk_conditions: str = " AND ".join([f"target.{col} = source.{col}" for col in pk_column_list])
+        update_set: str = ", ".join(
+            [f"{col} = source.{col}" for col in self.spark_df.columns if col not in pk_column_list])
+        insert_cols: str = ", ".join(self.spark_df.columns)
+        insert_vals: str = ", ".join([f"source.{col}" for col in self.spark_df.columns])
+
+        merge_sql: str = f"""
+            MERGE INTO {target_table} AS target
+            USING payload_temp_view AS source
+            ON {pk_conditions}
+            WHEN MATCHED THEN
+                UPDATE SET {update_set}
+            WHEN NOT MATCHED THEN
+                INSERT ({insert_cols})
+                VALUES ({insert_vals})
+        """
+
+        self.logger.info(f"Running MERGE SQL: {merge_sql}")
+        self.target_interface.query(merge_sql)
+
+    def delete_from_target_table(self) -> None:
+        delete_sql: str = f"""
+            DELETE FROM {self.builder.target_table}
+            WHERE {self.builder.where_clause}
+        """
+        self.logger.info(f"Running DELETE SQL: {delete_sql}")
+        self.target_interface.query(delete_sql)
+
+    @abstractmethod
+    def append(self, payload: str, overwrite: bool = False):
+        pass
 
     @abstractmethod
     def run_snapshot(self):

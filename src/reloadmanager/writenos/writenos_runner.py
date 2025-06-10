@@ -10,6 +10,7 @@ class WriteNOSRunner(GenericRunner):
 
     def __init__(self, builder: WriteNOSConfigBuilder, source_interface=None, target_interface=None):
         super().__init__(builder, source_interface, target_interface)
+        self.spark = self.target_interface.spark
 
     def export_nos(self, select_query: str, where_clause: str = None) -> str:
         """
@@ -57,21 +58,23 @@ class WriteNOSRunner(GenericRunner):
         result: list[tuple] = self.target_interface.query(f"SELECT COUNT(1) FROM `{catalog}`.{schema}.{table}")
         return int(result[0][0])
 
-    def copy_s3_files_into_delta(self, s3_path: str):
+    def append(self, payload: str, overwrite: bool = False):
+        if not overwrite:
+            self.delete_from_target_table()
 
         select_statement = ", ".join(
             [f"CAST({field['col_name']} AS {field['data_type']}) AS {field['col_name']}"
              for field in self.target_schema])
 
-        query = f"""
-COPY INTO {str(self.builder.target_table)}
-FROM (
-SELECT {select_statement}
-FROM '{s3_path}'
-)
-FILEFORMAT = PARQUET
-COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
-        """
+        query = dedent(f"""
+            COPY INTO {str(self.builder.target_table)}
+            FROM (
+            SELECT {select_statement}
+            FROM '{payload}'
+            )
+            FILEFORMAT = PARQUET
+            COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
+        """)
         self.logger.debug(f"Running COPY INTO query: {query}")
 
         self.target_interface.query(query)
@@ -85,13 +88,21 @@ COPY_OPTIONS ('force'='true','mergeSchema' = 'false')
 
             if not self.builder.where_clause:
                 self.truncate_target_table()
-
+            
             if validate_counts:
                 init_count = self.target_table_count()
 
             self.logger.info(
                 f"Importing {self.num_records} rows from {s3_path} to table {str(self.builder.target_table)}")
-            self.copy_s3_files_into_delta(s3_path)
+            
+            if self.builder.primary_key:
+                self.spark_df = self.spark.read.parquet(s3_path)
+                self.spark_df.createOrReplaceTempView("payload_temp_view")
+                self.merge()
+            else:
+                # if there's no where clause, we can overwrite
+                overwrite: bool = not bool(self.builder.where_clause)
+                self.append(s3_path, overwrite)
 
             if validate_counts:
                 rows_inserted = self.target_table_count() - init_count

@@ -32,6 +32,7 @@ dbutils.widgets.text("jdbc_threads", "")
 dbutils.widgets.text("validation_jobid", "")
 dbutils.widgets.text("source_tz", "")
 dbutils.widgets.text("log_level", "")
+dbutils.widgets.dropdown("create_table_if_not_exists", "False", ["True", "False"])
 
 catalog: str = dbutils.widgets.get("catalog")
 queue_schema: str = dbutils.widgets.get("queue_schema")
@@ -43,6 +44,7 @@ validation_jobid_raw: str = dbutils.widgets.get("validation_jobid")
 validation_jobid: int = int(validation_jobid_raw) if validation_jobid_raw else 0
 source_tz: str = dbutils.widgets.get("source_tz")
 log_level: str = dbutils.widgets.get("log_level")
+create_table_if_not_exists: bool = bool(dbutils.widgets.get("create_table_if_not_exists"))
 
 logs.set_logger_level(log_level)
 
@@ -81,7 +83,7 @@ class LoaderThread(Thread, LoggingMixin):
         self.reload_job_id: int = reload_job_id
         self.queue: PriorityQueue = priority_queue
         self.databricks_client: DatabricksRuntimeClient = databricks_client
-
+        
     def wait_if_needed(self):
         messaged = False
         while True:
@@ -103,19 +105,19 @@ class LoaderThread(Thread, LoggingMixin):
         # if a WriteNOS thread does not find a WriteNOS table to load, it will take a JDBC one
         if not task and self.strategy == "WriteNOS":
             with self.queue_lock:
-                task: tuple = self.queue.poll("JDBC")
+                task: tuple = self.queue.poll("JDBC")              
 
         if not task:
             self.logger.info(f"Thread {self.thread_id} found no queued tables. Sleeping...")
             time.sleep(60)
             return None
-
-        source_table, target_table, where_clause, lock_rows, event_time = task
-        duration, end_time, n_records, status, error = 0.0, 0.0, 0, 'Failed', ""
+        
+        source_table, target_table, where_clause, primary_key, lock_rows, event_time = task
+        duration, end_time, n_records, status, error = 0.0, 0.0, 0, 'FAILED', ""
         try:
             self.logger.info(f"Thread {self.thread_id} picked up {source_table}...")
             # reload the table
-            result: ReportRecord = self.reload_table(source_table, target_table, where_clause, lock_rows)
+            result: ReportRecord = self.reload_table(source_table, target_table, where_clause, primary_key, lock_rows)
 
             self.logger.info(f"Thread {self.thread_id} reloaded table '{source_table}'")
             duration, end_time, n_records, status, error = \
@@ -145,12 +147,14 @@ class LoaderThread(Thread, LoggingMixin):
             with LogLock.lock:
                 traceback.print_exc()
 
-    def reload_table(self, source_table: str, target_table: str, where_clause: str, lock_rows: bool) -> ReportRecord:
+    def reload_table(self, source_table: str, target_table: str, where_clause: str, primary_key: str, lock_rows: bool, create_table_if_not_exists: bool) -> ReportRecord:
         params: dict[str, str] = {
             "source_table": source_table,
             "target_table": target_table,
             "where_clause": where_clause,
-            "lock_rows": lock_rows
+            "primary_key": primary_key,
+            "lock_rows": lock_rows,
+            "create_table_if_not_exists": create_table_if_not_exists
         }
         output = dbx_client.trigger_job(self.reload_job_id, params, get_output=True)
         return eval(output)

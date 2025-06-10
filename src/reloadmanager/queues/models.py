@@ -6,6 +6,7 @@ class QueueRecord:
     source_table: str
     target_table: str
     where_clause: str
+    primary_key: str
     event_time: str
     trigger_time: str | None
     strategy: str
@@ -15,19 +16,22 @@ class QueueRecord:
     event_time_latest: str | None
 
     def to_sql_values(self) -> str:
-        def lit(v):
+        def lit(f, v):
+            if f.name == "where_clause" and v is not None:
+                v_rep: str = v.replace("'", "\\'")
+                return f"'{v_rep}'"  # Don't quote SQL clauses
             match v:
-                case None:              # NULL sentinel
+                case None:
                     return "NULL"
-                case bool() as b:       # booleans → true/false
+                case bool() as b:
                     return "true" if b else "false"
-                case int():             # numerics stay raw
+                case int():
                     return str(v)
-                case str() as s:        # strings: escape quotes
-                    s_rep: str = s.replace("'", "")
+                case str() as s:
+                    s_rep: str = s.replace("'", "")  # or replace("'", "''") for SQL escaping
                     return f"'{s_rep}'"
 
-        return "(" + ", ".join(lit(v) for v in iter(self)) + ")"
+        return "(" + ", ".join(lit(f, v) for f, v in zip(fields(self), iter(self))) + ")"
 
     @classmethod
     def fields_str(cls) -> str:
@@ -38,6 +42,7 @@ class QueueRecord:
             self.source_table,
             self.target_table,
             self.where_clause,
+            self.primary_key,
             self.event_time,
             self.trigger_time,
             self.strategy,
@@ -49,7 +54,7 @@ class QueueRecord:
         return f[index]
 
     def __len__(self):
-        return 10
+        return 11
 
     def __iter__(self):
         # re-use the existing tuple to avoid dup logic
