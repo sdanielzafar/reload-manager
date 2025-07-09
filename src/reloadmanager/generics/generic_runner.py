@@ -89,7 +89,7 @@ class GenericRunner(ABC, LoggingMixin):
                 if (int(row['Decimal Total Digits']) < 0) | (int(row['Decimal Fractional Digits']) < 0):
                     ddl_query += f"{col_name} STRING, "
                 else:
-                    ddl_query += f"{col_name} DECIMAL({int(row['Decimal Total Digits'])}, {int(row['Decimal Fractional Digits'])})), "
+                    ddl_query += f"{col_name} DECIMAL({int(row['Decimal Total Digits'])}, {int(row['Decimal Fractional Digits'])}), "
             elif col_type in ('F',):
                 ddl_query += f"{col_name} DOUBLE, "
             else:
@@ -125,8 +125,10 @@ class GenericRunner(ABC, LoggingMixin):
             col_name: str = row['Column Dictionary Name'].strip()
 
             # Determine how to handle different column types
-            if col_type in ('TS', 'SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ'):
+            if col_type in ('TS', 'SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'TZ'):
                 select_query += f"CAST (\"{col_name}\" AS VARCHAR({row['Max Length']})) AS \"{col_name}\", "
+            elif col_type in ('AT',):
+                select_query += f"CAST (\"{col_name}\" AS VARCHAR(32)) AS \"{col_name}\", "
             elif col_type in ('DA',):
                 select_query += f"CAST (CAST (\"{col_name}\" AS DATE format 'YYYY-MM-DD') AS VARCHAR(10))  AS \"{col_name}\", "
             elif col_type in ('CF', 'CO'):
@@ -142,8 +144,10 @@ class GenericRunner(ABC, LoggingMixin):
                     match col_type:
                         case decimal if "decimal" in decimal:
                             col_precision = decimal.upper()
-                        case string if "varchar" in string:
-                            col_precision = string.upper()
+                        case string if "string" in string:
+                            col_precision = f"VARCHAR({int(row['Max Length'])})"
+                        case varchar if "varchar" in varchar:
+                            col_precision = varchar.upper()
                         case char if "char" in char:
                             col_precision = char.upper()
                         case other:
