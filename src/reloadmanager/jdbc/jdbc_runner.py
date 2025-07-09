@@ -32,11 +32,11 @@ class JDBCRunner(GenericRunner):
             self.delete_from_target_table()
 
         schema: str = ", ".join(
-            [f"{col['col_name']} {self.fix_str_types(col['data_type'])}" for col in self.target_schema])
+            [f"`{col['col_name']}` {self.fix_str_types(col['data_type'])}" for col in self.target_schema])
         self.logger.debug(f"Using payload schema: {schema}")
 
         self.spark.createDataFrame(payload, schema=schema) \
-            .selectExpr([f"CAST({f['col_name']} AS {f['data_type']}) AS {f['col_name']}" for f in self.target_schema]) \
+            .selectExpr([f"CAST(`{f['col_name']}` AS {f['data_type']}) AS `{f['col_name']}`" for f in self.target_schema]) \
             .write.format("delta") \
             .mode("overwrite" if overwrite else "append") \
             .saveAsTable(f"{self.builder.target_table}")

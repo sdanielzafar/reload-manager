@@ -63,7 +63,7 @@ class WriteNOSRunner(GenericRunner):
             self.delete_from_target_table()
 
         select_statement = ", ".join(
-            [f"CAST({field['col_name']} AS {field['data_type']}) AS {field['col_name']}"
+            [f"CAST(`{field['col_name']}` AS {field['data_type']}) AS `{field['col_name']}`"
              for field in self.target_schema])
 
         query = dedent(f"""
