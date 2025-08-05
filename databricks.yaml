@@ -20,6 +20,9 @@ variables:
   demographic_table:
     description: The table with the demographic data required for data migration
     default: reloadmanager.tr_tables_writenos
+  enqueuer_tracking_table:
+    description: The table that enqueuer polls in Teradata
+    default: EDWPC_SYNC.EBI_LOAD_COMPLETION_GOLD
   catalog:
     default: null
   cluster_id:
@@ -43,6 +46,31 @@ targets:
     workspace:
       host: https://dbc-7c9eb967-788d.cloud.databricks.com
 
+  targets:
+    cons_acc:
+      variables:
+        catalog:
+          default: 1dp_cons_acc
+        cluster_id:
+          default: 0804-235914-zwiziyvm
+        validation_jobid:
+          default: 0
+        jdbc_threads:
+          default: 5
+        enqueuer_tracking_table:
+          default: EDWDC_SYNC.TERADATAEXTRACTOR_LOAD_COMPLETION
+      mode: development
+      default: true
+      workspace:
+        host: https://dbc-368808dc-e439.cloud.databricks.com/
+      permissions:
+        - user_name: mrudula.geddam@nxp.com
+          level: CAN_MANAGE
+        - user_name: dan.zafar@nxp.com
+          level: CAN_MANAGE
+        - user_name: jordan.thomas@nxp.com
+          level: CAN_MANAGE
+
   prod:
     variables:
       catalog:
@@ -53,6 +81,8 @@ targets:
         default: 0
       jdbc_threads:
         default: 5
+      enqueuer_tracking_table:
+        default: EDWPC_SYNC.EBI_LOAD_COMPLETION_GOLD
 
     mode: production
     workspace:

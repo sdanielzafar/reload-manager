@@ -28,6 +28,7 @@ dbutils.widgets.text("demographic_table", "reloadmanager.tr_tables_writenos")
 dbutils.widgets.text("starting_watermark", "")
 dbutils.widgets.text("reset_queue", "False")
 dbutils.widgets.text("log_level", "info")
+dbutils.widgets.text("tracking_table", "")
 
 catalog: str = dbutils.widgets.get("catalog")
 queue_schema: str = dbutils.widgets.get("queue_schema")
@@ -36,6 +37,7 @@ starting_watermark: EventTime = EventTime.from_epoch(int(dbutils.widgets.get("st
 reset_queue_str: str = dbutils.widgets.get("reset_queue")
 reset_queue: bool = {"true": True, "false": False}[reset_queue_str.strip().lower()]
 log_level: str = dbutils.widgets.get("log_level")
+tracking_table: str = dbutils.widgets.get("tracking_table")
 
 # COMMAND ----------
 
@@ -129,7 +131,7 @@ def query_tracking_table(watermark: EventTime, td_client: TeradataClient = td_cl
         SELECT 
             ObjectDatabaseName || '.' || ObjectTableName as tbl, 
             LoadCompletionTS as reload_ts 
-        FROM EDWPC_SYNC.EBI_LOAD_COMPLETION_GOLD 
+        FROM {tracking_table}
         WHERE LoadCompletionTS > '{watermark}'
         AND LoadCompletionTS <= '{EventTime.now()}' 
     """

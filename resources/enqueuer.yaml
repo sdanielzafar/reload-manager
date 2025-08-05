@@ -24,3 +24,5 @@ resources:
           default: "false"
         - name: log_level
           default: "info"
+        - name: tracking_table
+          default: ${var.enqueuer_tracking_table}
