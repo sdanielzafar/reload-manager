@@ -16,8 +16,6 @@ resources:
           default: ${var.catalog}
         - name: queue_schema
           default: ${var.queue_schema}
-        - name: demographic_table
-          default: ${var.demographic_table}
         - name: starting_watermark
           default: "{{job.trigger.time.timestamp_ms}}"
         - name: reset_queue
