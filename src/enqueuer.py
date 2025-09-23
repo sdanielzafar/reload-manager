@@ -87,7 +87,7 @@ def define_priority_view(p_queue: PriorityQueue) -> None:
             d.min_staleness, d.max_staleness,
             floor(
                 (unix_timestamp(current_timestamp()) - 
-                unix_timestamp(to_utc_timestamp(q.event_time, 'America/Phoenix'))) 
+                unix_timestamp(q.event_time)) 
                 / 60) AS staleness_m,
             (CASE WHEN staleness_m < d.min_staleness THEN 0                 
                   WHEN (max_staleness - staleness_m) > 60 THEN 1              

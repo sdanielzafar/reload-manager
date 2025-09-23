@@ -74,24 +74,24 @@ class GenericRunner(ABC, LoggingMixin):
 
             # Determine how to handle different column types
             if col_type in ('SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'AT', 'TZ', 'CV', 'CF', 'CO', 'JN'):
-                ddl_query += f"{col_name} STRING, "
+                ddl_query += f"`{col_name}`STRING, "
             elif col_type in ('DA',):
-                ddl_query += f"{col_name} DATE, "
+                ddl_query += f"`{col_name}` DATE, "
             elif col_type in ('TS',):
-                ddl_query += f"{col_name} TIMESTAMP, "
+                ddl_query += f"`{col_name}` TIMESTAMP, "
             elif col_type in ('I', 'I1', 'I2'):
-                ddl_query += f"{col_name} INTEGER, "
+                ddl_query += f"`{col_name}` INTEGER, "
             elif col_type in ('I8',):
-                ddl_query += f"{col_name} LONG, "
+                ddl_query += f"`{col_name}` LONG, "
             elif col_type in ('D', 'N'):
                 # for most numeric and decimal columns, we can just cast using precision and scale.
                 # but some types in Teradata are numeric and don't have these, so we need to handle dynamically
                 if (int(row['Decimal Total Digits']) < 0) | (int(row['Decimal Fractional Digits']) < 0):
-                    ddl_query += f"{col_name} STRING, "
+                    ddl_query += f"`{col_name}` STRING, "
                 else:
-                    ddl_query += f"{col_name} DECIMAL({int(row['Decimal Total Digits'])}, {int(row['Decimal Fractional Digits'])}), "
+                    ddl_query += f"`{col_name}` DECIMAL({int(row['Decimal Total Digits'])}, {int(row['Decimal Fractional Digits'])}), "
             elif col_type in ('F',):
-                ddl_query += f"{col_name} DOUBLE, "
+                ddl_query += f"`{col_name}` DOUBLE, "
             else:
                 raise Exception(
                     f"Unable to create DDL from {str(self.builder.source_table)}, found unexepected type: {col_type}"
@@ -145,7 +145,7 @@ class GenericRunner(ABC, LoggingMixin):
                         case decimal if "decimal" in decimal:
                             col_precision = decimal.upper()
                         case string if "string" in string:
-                            col_precision = f"VARCHAR({int(row['Max Length'])})"
+                            col_precision = f"VARCHAR(256)"
                         case varchar if "varchar" in varchar:
                             col_precision = varchar.upper()
                         case char if "char" in char:
