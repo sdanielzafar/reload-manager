@@ -5,11 +5,44 @@
 
 # COMMAND ----------
 
+from dataclasses import dataclass, fields
+from databricks.sdk.runtime import dbutils
 from datetime import datetime
 import traceback
 import time
 from threading import Thread, Event, Lock
-from databricks.sdk.runtime import dbutils
+import subprocess
+
+# COMMAND ----------
+
+spark.conf.set("spark.sql.session.timeZone", "America/Phoenix")
+
+# COMMAND ----------
+
+dbutils.widgets.text("wheel_path", "")
+wheel_path: str = dbutils.widgets.get("wheel_path")
+
+# COMMAND ----------
+
+wheel_path = wheel_path + "/.internal"
+wheel_files = dbutils.fs.ls(wheel_path)
+wheel_file_name = [file.name for file in wheel_files if file.name.endswith('.whl')][0]
+full_wheel_file_path = wheel_path + "/" + wheel_file_name
+
+# COMMAND ----------
+
+subprocess.check_call([
+    'pip',
+    'install',
+    full_wheel_file_path
+])
+subprocess.check_call([
+    'pip',
+    'install',
+    'teradatasql'
+])
+
+# COMMAND ----------
 
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
 from reloadmanager.queues.priority_queue import PriorityQueue

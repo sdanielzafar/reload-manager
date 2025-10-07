@@ -3,11 +3,44 @@
 # MAGIC # Enqueuer Job
 # MAGIC The enqueuer job will query Teradata's tracking table and put tables into the queue to be processed
 
+
 # COMMAND ----------
 
 from dataclasses import dataclass, fields
 import time
 from databricks.sdk.runtime import dbutils
+import subprocess
+
+# COMMAND ----------
+
+spark.conf.set("spark.sql.session.timeZone", "America/Phoenix")
+
+# COMMAND ----------
+
+dbutils.widgets.text("wheel_path", "")
+wheel_path: str = dbutils.widgets.get("wheel_path")
+
+# COMMAND ----------
+
+wheel_path = wheel_path + "/.internal"
+wheel_files = dbutils.fs.ls(wheel_path)
+wheel_file_name = [file.name for file in wheel_files if file.name.endswith('.whl')][0]
+full_wheel_file_path = wheel_path + "/" + wheel_file_name
+
+# COMMAND ----------
+
+subprocess.check_call([
+    'pip',
+    'install',
+    full_wheel_file_path
+])
+subprocess.check_call([
+    'pip',
+    'install',
+    'teradatasql'
+])
+
+# COMMAND ----------
 
 from reloadmanager.clients.databricks_runtime_client import DatabricksRuntimeClient
 from reloadmanager.clients.teradata_client import TeradataClient
@@ -36,6 +69,18 @@ starting_watermark: EventTime = EventTime.from_epoch(int(dbutils.widgets.get("st
 reset_queue_str: str = dbutils.widgets.get("reset_queue")
 reset_queue: bool = {"true": True, "false": False}[reset_queue_str.strip().lower()]
 log_level: str = dbutils.widgets.get("log_level")
+
+# COMMAND ----------
+subprocess.check_call([
+    'pip',
+    'install',
+    wheel_path
+])
+subprocess.check_call([
+    'pip',
+    'install',
+    'teradatasql'
+])
 
 # COMMAND ----------
 
@@ -79,7 +124,7 @@ def define_priority_view(p_queue: PriorityQueue) -> None:
     """
 
     sql: str = f"""
-    CREATE OR REPLACE VIEW {catalog}.{queue_schema}.priorities_v AS (
+    CREATE VIEW IF NOT EXISTS {catalog}.{queue_schema}.priorities_v AS (
         SELECT source_table, target_table, where_clause, event_time, strategy, lock_rows, priority,
         ROW_NUMBER() OVER (ORDER BY priority DESC, event_time ASC) as rank
         FROM (

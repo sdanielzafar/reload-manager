@@ -1,16 +1,16 @@
 resources:
   jobs:
     LoadDispatcher:
-      name: LoadDispatcher
+      name: ReloadManager-LoadDispatcher
       tasks:
         - task_key: Dispatch
           notebook_task:
             notebook_path: ../src/dispatcher.py
-          existing_cluster_id: ${var.cluster_id}
+          # existing_cluster_id: ${var.cluster_id}
           max_retries: 3
           min_retry_interval_millis: 600000
-          libraries:
-            - whl: ../dist/*.whl
+          # libraries:
+          #   - whl: ../dist/*.whl
       parameters:
         - name: catalog
           default: ${var.catalog}
@@ -30,3 +30,5 @@ resources:
           default: ${var.teradata_tz}
         - name: log_level
           default: info
+        - name: wheel_path
+          default: ${workspace.artifact_path}

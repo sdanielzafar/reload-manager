@@ -16,7 +16,7 @@ class WriteNOSConfigBuilder(GenericConfigBuilder, SecretMixin):
             lock_rows: bool = True
     ):
         super().__init__(source_table, target_table, where_clause, lock_rows)
-        self.aws_bucket = self.get_secret("AWS_BUCKET")
+        self.aws_bucket = "1dp-migration-acrion-td-sync" #self.get_secret("AWS_BUCKET")
 
     @cached_property
     def id(self) -> str:
@@ -25,4 +25,4 @@ class WriteNOSConfigBuilder(GenericConfigBuilder, SecretMixin):
     @cached_property
     def stage_root_dir(self) -> str:
         ts: str = datetime.now().strftime("%Y%m%d_%H%M%S_") + f"{datetime.now().microsecond // 1000:03d}"
-        return f"reload-manager-stage/{self.target_table.catalog}/{self.source_table.as_path()}/migration_{self.id}_{ts}"
+        return f"reload-manager-stage/pre-prod-validation/{self.target_table.catalog}/{self.source_table.as_path()}/migration_{self.id}_{ts}"

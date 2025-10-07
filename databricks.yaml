@@ -33,13 +33,57 @@ targets:
       catalog:
         default: 1dp_migration_dev_catalog_3573379518104516
       cluster_id:
-        default: 0416-180448-i5l71jnf
+        default: 0604-211533-jsh7s53q
       validation_jobid:
-        default: 0
+        default: 811462006355271
+      jdbc_threads:
+        default: 10
     mode: development
     default: true
     workspace:
       host: https://dbc-7c9eb967-788d.cloud.databricks.com
+  
+  migprd:
+    variables:
+      catalog:
+        default: 1dp_migration_prd
+      cluster_id:
+        default: 0917-210417-c6cl3mne
+      validation_jobid:
+        default: 0
+      jdbc_threads:
+        default: 5
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-d723fd35-120a.cloud.databricks.com
+    permissions:
+      - user_name: dan.zafar@nxp.com
+        level: CAN_MANAGE
+  
+  consdev:
+    variables:
+      catalog:
+        default: 1dp_pre_prod_ddl
+      cluster_id:
+        default: 0827-173624-lj8edgx6
+      validation_jobid:
+        default: 0
+      jdbc_threads:
+        default: 2
+      writenos_threads:
+        default: 1
+    mode: production
+    default: true
+    workspace:
+      host: https://dbc-09ee0323-91c2.cloud.databricks.com
+      root_path: /Shared/reloadmanager/.bundle/${bundle.name}/${bundle.target}
+      artifact_path: /Volumes/1dp_pre_prod_ddl/validation_metrics/reload-manager/artifacts
+    permissions:
+      - user_name: raja.tallapaneni@nxp.com
+        level: CAN_MANAGE
+      - user_name: riyaz.mohammed@nxp.com
+        level: CAN_MANAGE
 
   prod:
     variables:
@@ -51,7 +95,6 @@ targets:
         default: 0
       jdbc_threads:
         default: 5
-
     mode: production
     workspace:
       host: https://dbc-56809786-e74a.cloud.databricks.com
@@ -68,4 +111,4 @@ artifacts:
   default:
     type: whl
     build: python -m build
-    dynamic_version: true
+    # dynamic_version: true

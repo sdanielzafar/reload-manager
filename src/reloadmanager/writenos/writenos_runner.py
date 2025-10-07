@@ -60,7 +60,7 @@ class WriteNOSRunner(GenericRunner):
     def copy_s3_files_into_delta(self, s3_path: str):
 
         select_statement = ", ".join(
-            [f"CAST({field['col_name']} AS {field['data_type']}) AS {field['col_name']}"
+            [f"CAST(`{field['col_name']}` AS {field['data_type']}) AS `{field['col_name']}`"
              for field in self.target_schema])
 
         query = f"""

@@ -1,14 +1,16 @@
 resources:
   jobs:
     JDBC_Runner:
-      name: JDBC-Runner
+      name: ReloadManager-JDBC-Runner
       tasks:
         - task_key: run
           notebook_task:
             notebook_path: ../src/jdbc_runner.py
-          existing_cluster_id: ${var.cluster_id}
-          libraries:
-            - whl: ../dist/*.whl
+          # existing_cluster_id: ${var.cluster_id}
+          max_retries: 3
+          min_retry_interval_millis: 300000
+          # libraries:
+          #   - whl: ../dist/*.whl
       queue:
         enabled: true
       max_concurrent_runs: ${var.jdbc_threads}
@@ -21,3 +23,5 @@ resources:
           default: ""
         - name: log_level
           default: "debug"
+        - name: wheel_path
+          default: ${workspace.artifact_path}

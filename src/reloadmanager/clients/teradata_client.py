@@ -9,15 +9,17 @@ class TeradataClient(GenericDatabaseClient, SecretMixin):
     def __init__(self, logmech: str = "TD2"):
         super().__init__()
         # hydrate env vars, then fetch creds (works on Databricks & local)
-        self.td_host: str = self.get_secret('TD_HOST')
-        self.td_user: str = self.get_secret("TD_USER")
-        self.td_pass: str = self.get_secret("TD_PASS")
+        self.td_host: str = self.get_secret("TD_HOST", "reloadmanager")
+        self.td_user: str = self.get_secret("TD_USER", "reloadmanager")
+        self.td_pass: str = self.get_secret("TD_PASS", "reloadmanager")
 
         self._conn_kwargs = {
             "host": self.td_host,
             "user": self.td_user,
             "password": self.td_pass,
             "logmech": logmech,
+            "SSLMode": "Allow",
+            "dbs_port": 1025,
         }
 
     @contextmanager
