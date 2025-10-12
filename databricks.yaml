@@ -84,6 +84,30 @@ targets:
         level: CAN_MANAGE
       - user_name: riyaz.mohammed@nxp.com
         level: CAN_MANAGE
+  
+  srcdev:
+    variables:
+      catalog:
+        default: 1dp_src_dev
+      cluster_id:
+        default: 1010-051826-tzuanhp1
+      validation_jobid:
+        default: 0
+      jdbc_threads:
+        default: 5
+      writenos_threads:
+        default: 2
+    mode: production
+    default: true
+    workspace:
+      host: https://dbc-8b1ea843-d5b5.cloud.databricks.com
+      root_path: /Shared/reloadmanager/.bundle/${bundle.name}/${bundle.target}
+      artifact_path: /Volumes/1dp_src_dev/validation_metrics/reload-manager/artifacts
+    permissions:
+      - user_name: david.prinsen@nxp.com
+        level: CAN_MANAGE
+      - user_name: michael.pasternak@nxp.com
+        level: CAN_MANAGE
 
   prod:
     variables:
