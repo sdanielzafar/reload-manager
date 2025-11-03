@@ -1,7 +1,7 @@
 resources:
   jobs:
     JDBC_Runner:
-      name: JDBC-Runner
+      name: '[ReloadManager] JDBC-Runner'
       tasks:
         - task_key: run
           notebook_task:
@@ -25,5 +25,5 @@ resources:
           default: ""
         - name: log_level
           default: "debug"
-        - name: create_table_if_not_exists
-          default: ""
+        # - name: create_table_if_not_exists
+        #   default: ""

@@ -57,6 +57,14 @@ class WriteNOSRunner(GenericRunner):
         catalog, schema, table = astuple(self.builder.target_table)
         result: list[tuple] = self.target_interface.query(f"SELECT COUNT(1) FROM `{catalog}`.{schema}.{table}")
         return int(result[0][0])
+    
+    @staticmethod
+    def fix_str_types(t: str) -> str:
+        match t:
+            case t if t.lower().startswith(("varchar", "char", "timestamp", "date", "interval")):
+                return "string"
+            case _:
+                return t
 
     def append(self, payload: str, overwrite: bool = False):
         if not overwrite:
@@ -96,7 +104,9 @@ class WriteNOSRunner(GenericRunner):
                 f"Importing {self.num_records} rows from {s3_path} to table {str(self.builder.target_table)}")
             
             if self.builder.primary_key:
-                self.spark_df = self.spark.read.parquet(s3_path)
+                schema: str = ", ".join(
+                    f"{col['col_name']} {self.fix_str_types(col['data_type'])}" for col in self.target_schema)
+                self.spark_df = self.spark.read.schema(schema).parquet(s3_path)
                 self.spark_df.createOrReplaceTempView("payload_temp_view")
                 self.merge()
             else:

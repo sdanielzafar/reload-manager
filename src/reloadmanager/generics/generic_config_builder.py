@@ -11,15 +11,15 @@ class GenericConfigBuilder(ABC):
             target_table: str,
             where_clause: str = None,
             primary_key: str = None,
-            lock_rows: bool = True,
-            create_table_if_not_exists: bool = False
+            lock_rows: bool = True
+            # create_table_if_not_exists: bool = False
     ):
         self.source_table: TableInfo = self._validate_source_table(source_table)
         self.target_table: TableInfo = self._validate_target_table(target_table)
         self.where_clause: str = where_clause
         self.primary_key: str = primary_key
         self.lock_rows: bool = lock_rows
-        self.create_table_if_not_exists: bool = create_table_if_not_exists
+        # self.create_table_if_not_exists: bool = create_table_if_not_exists
 
     @staticmethod
     def _validate_source_table(source_table: str) -> TableInfo:

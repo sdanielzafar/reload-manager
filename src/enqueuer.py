@@ -83,7 +83,7 @@ def define_priority_view(p_queue: PriorityQueue) -> None:
     sql: str = f"""
     CREATE OR REPLACE VIEW {catalog}.{queue_schema}.priorities_v AS (
         SELECT source_table, target_table, where_clause, primary_key, event_time, strategy, lock_rows, priority,
-        ROW_NUMBER() OVER (ORDER BY priority DESC, event_time ASC) as rank
+        ROW_NUMBER() OVER (ORDER BY priority DESC, event_time ASC, source_table ASC) as rank
         FROM (
             SELECT q.source_table, q.target_table, q.where_clause, q.primary_key, q.event_time, q.strategy, q.lock_rows, q.status,
             d.min_staleness, d.max_staleness,
@@ -198,6 +198,7 @@ def get_table_metadata(tables: set[str]) -> dict[str, TableAttrRecord]:
     table_info: list[tuple] = dbx_client.query(
         f"SELECT * FROM {demographic_table} "
         f"WHERE source_table IN ('{tbl_vals}')"
+        f"AND disabled = false"
     )
     return {(r := TableAttrRecord.from_tuple(line)).source_table: r for line in table_info}
 
@@ -206,20 +207,25 @@ def get_table_metadata(tables: set[str]) -> dict[str, TableAttrRecord]:
 
 def update_strategy(source_table: str, target_table: str, cdc_watermark: str, strategy: str, cutoff: int = 200000) -> tuple[str, str]:
     if cdc_watermark:
-        max_val_result: list[tuple] = dbx_client.query(
-            f"SELECT CAST(MAX({cdc_watermark}) as string) as max_val FROM {target_table}"
-        )
-        max_val: str | None = max_val_result[0][0] if max_val_result and max_val_result[0][0] is not None else None
-
-        if max_val is not None:
-            where_clause: str = f"{cdc_watermark} >= '{max_val}'"
-            row_count_result: list[tuple] = td_client.query(
-                f"SELECT COUNT(1) as row_count FROM {source_table} WHERE {cdc_watermark} >= '{max_val}'"
+        try:
+            max_val_result: list[tuple] = dbx_client.query(
+                f"SELECT CAST(MAX({cdc_watermark}) as string) as max_val FROM {target_table}"
             )
-            row_count: int = int(row_count_result[0][0]) if row_count_result else 0
+            max_val: str | None = max_val_result[0][0] if max_val_result and max_val_result[0][0] is not None else None
 
-            strategy: str = "JDBC" if row_count < cutoff else "WriteNOS"
-            return strategy, where_clause
+            if max_val is not None:
+                where_clause: str = f"{cdc_watermark} >= '{max_val}'"
+                row_count_result: list[tuple] = td_client.query(
+                    f"SELECT COUNT(1) as row_count FROM {source_table} WHERE {cdc_watermark} >= '{max_val}'"
+                )
+                row_count: int = int(row_count_result[0][0]) if row_count_result else 0
+
+                strategy: str = "JDBC" if row_count < cutoff else "WriteNOS"
+                return strategy, where_clause
+        except Exception as e:
+            # Log the error and fall back to default behavior
+            logs.logger.info(f"Error processing CDC watermark {cdc_watermark} for {source_table}")
+            return strategy, ""
     return strategy, ""
 
 
@@ -237,6 +243,7 @@ def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
         attrs: TableAttrRecord = tbl_metadata[record.source_table]
         target_table: str = f"{catalog}.{attrs.target_table}"
         cdc_watermark: str | None = getattr(attrs, "cdc_watermark", None)
+        primary_key: str = getattr(attrs, "primary_key", "") or ""
         
         strategy, where_clause = update_strategy(source_table, target_table, cdc_watermark, attrs.strategy)
 
@@ -246,7 +253,7 @@ def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
                 source_table,
                 target_table,
                 where_clause,
-                getattr(attrs, "primary_key", None),
+                primary_key,
                 str(record.event_time),
                 None,
                 strategy,
@@ -271,8 +278,6 @@ define_priority_view(queue)
 if reset_queue:
     logs.logger.info("Clearing the queue...")
     queue.truncate()
-else:
-    queue.requeue_running()
 
 watermark: EventTime = init_watermark(starting_watermark)
 

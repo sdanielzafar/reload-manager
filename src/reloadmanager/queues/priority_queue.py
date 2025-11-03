@@ -65,7 +65,7 @@ class PriorityQueue(LoggingMixin):
 
     def truncate(self):
         self.client.query(f"TRUNCATE TABLE {self.queue_tbl}")
-        self.client.query(f"TRUNCATE TABLE {self.queue_hist_tbl}")
+        # self.client.query(f"TRUNCATE TABLE {self.queue_hist_tbl}")
 
     def requeue_running(self):
 
@@ -165,6 +165,7 @@ class PriorityQueue(LoggingMixin):
             MERGE INTO {self.queue_tbl} AS tgt
             USING src
               ON tgt.source_table = src.source_table
+              AND tgt.status = 'Q'
             
             WHEN MATCHED AND tgt.status = 'Q' THEN
               UPDATE SET

@@ -39,6 +39,11 @@ class DatabricksRuntimeClient(GenericDatabaseClient):
         run = self.ws.jobs.run_now(job_id=job_id, job_parameters=params or {})
         if not get_output:
             return run.run_id
-        run_id = run.result(timeout=timedelta(minutes=60))
-        # get notebook output
-        return self.ws.jobs.get_run_output(run_id.tasks[0].run_id).notebook_output.result
+        
+        # wait for the task finish, including any retries
+        result = run.result(timeout=timedelta(minutes=60))
+        # get the final attempt for notebook output
+        final_attempt = max(task.attempt_number for task in result.tasks)
+ 
+        return self.ws.jobs.get_run_output(result.tasks[final_attempt].run_id).notebook_output.result
+ 

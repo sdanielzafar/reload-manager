@@ -1,13 +1,13 @@
 resources:
   jobs:
     LoadDispatcher:
-      name: LoadDispatcher
+      name: '[ReloadManager] LoadDispatcher'
       tasks:
         - task_key: Dispatch
           notebook_task:
             notebook_path: ../src/dispatcher.py
           existing_cluster_id: ${var.cluster_id}
-          max_retries: 3
+          max_retries: 5
           min_retry_interval_millis: 600000
           libraries:
             - whl: ../dist/*.whl
@@ -30,5 +30,5 @@ resources:
           default: ${var.teradata_tz}
         - name: log_level
           default: info
-        - name: create_table_if_not_exists
-          default: False
+        # - name: create_table_if_not_exists
+        #   default: False

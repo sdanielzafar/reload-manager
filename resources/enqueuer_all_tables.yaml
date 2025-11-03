@@ -1,26 +1,26 @@
-resources:
-  jobs:
-    Enqueuer-cons-acc:
-      name: Enqueuer-cons-acc
-      tasks:
-        - task_key: Enqueue
-          notebook_task:
-            notebook_path: ../src/enqueuer_cons_acc.py
-          existing_cluster_id: ${var.cluster_id}
-          max_retries: 3
-          min_retry_interval_millis: 600000
-          libraries:
-            - whl: ../dist/*.whl
-      parameters:
-        - name: catalog
-          default: ${var.catalog}
-        - name: queue_schema
-          default: ${var.queue_schema}
-        - name: starting_watermark
-          default: "{{job.trigger.time.timestamp_ms}}"
-        - name: reset_queue
-          default: "false"
-        - name: log_level
-          default: "info"
-        - name: tracking_table
-          default: ${var.enqueuer_tracking_table}
+# resources:
+#   jobs:
+#     Enqueuer-cons-acc:
+#       name: Enqueuer-cons-acc
+#       tasks:
+#         - task_key: Enqueue
+#           notebook_task:
+#             notebook_path: ../src/enqueuer_cons_acc.py
+#           existing_cluster_id: ${var.cluster_id}
+#           max_retries: 3
+#           min_retry_interval_millis: 600000
+#           libraries:
+#             - whl: ../dist/*.whl
+#       parameters:
+#         - name: catalog
+#           default: ${var.catalog}
+#         - name: queue_schema
+#           default: ${var.queue_schema}
+#         - name: starting_watermark
+#           default: "{{job.trigger.time.timestamp_ms}}"
+#         - name: reset_queue
+#           default: "false"
+#         - name: log_level
+#           default: "info"
+#         - name: tracking_table
+#           default: ${var.enqueuer_tracking_table}

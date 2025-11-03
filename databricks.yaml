@@ -34,13 +34,29 @@ targets:
   dev:
     variables:
       catalog:
-        default: 1dp_migration_dev_catalog_3573379518104516
+        default: 1dp_migration_snapshot_dev
       cluster_id:
         default: 0416-180448-i5l71jnf
       validation_jobid:
         default: 0
       jdbc_threads:
         default: 5
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-7c9eb967-788d.cloud.databricks.com
+  devtest:
+    variables:
+      catalog:
+        default: 1dp_migration_dev_catalog_3573379518104516
+      cluster_id:
+        default: 1012-220619-uupbw1jk
+      validation_jobid:
+        default: 0
+      jdbc_threads:
+        default: 5
+      demographic_table:
+        default: reloadmanager_test.cdc_tables_test
     mode: development
     default: true
     workspace:
@@ -80,8 +96,12 @@ targets:
         default: 0
       jdbc_threads:
         default: 5
+      writenos_threads:
+        default: 3
       enqueuer_tracking_table:
         default: EDWPC_SYNC.EBI_LOAD_COMPLETION_GOLD
+      demographic_table:
+        default: reloadmanager.gold_tables_reload_list
 
     mode: production
     workspace:
@@ -92,6 +112,10 @@ targets:
         level: CAN_MANAGE
       - user_name: dan.zafar@nxp.com
         level: CAN_MANAGE
+      - user_name: aditya.sekar@nxp.com
+        level: CAN_MANAGE
+      - group_name: users
+        level: CAN_VIEW
     run_as:
       service_principal_name: bfc172c9-5687-4832-a650-cee5cd8a5a5a
 
