@@ -164,8 +164,8 @@ class TableAttrRecord:
 
         def valid_table(s: str) -> str | None:
             if s:
-                if len(s.split(".")) != 2:
-                    raise ValueError(f"Table '{s}' must have 2 namespaces in the input config file")
+                if len(s.split(".")) not in (2, 3):
+                    raise ValueError(f"Table '{s}' must have 2 or 3 namespaces (schema.table or catalog.schema.table)")
                 return s
             return None
 
@@ -241,7 +241,7 @@ def add_metadata(new_tables: list[TrackerRecord]) -> list[QueueRecord]:
 
         source_table: str = record.source_table
         attrs: TableAttrRecord = tbl_metadata[record.source_table]
-        target_table: str = f"{catalog}.{attrs.target_table}"
+        target_table: str = attrs.target_table if len(attrs.target_table.split(".")) == 3 else f"{catalog}.{attrs.target_table}"
         cdc_watermark: str | None = getattr(attrs, "cdc_watermark", None)
         primary_key: str = getattr(attrs, "primary_key", "") or ""
         
