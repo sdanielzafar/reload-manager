@@ -123,12 +123,18 @@ class GenericRunner(ABC, LoggingMixin):
         for row in self.source_interface.get_columns():
             col_type: str = row['Type'].strip()
             col_name: str = row['Column Dictionary Name'].strip()
+            col_format: str = row['Format'].strip()
 
             # Determine how to handle different column types
-            if col_type in ('TS', 'SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'TZ'):
+            if col_type == 'TS' and col_format == 'YYYYMMDDHH':
+                select_query += f"CAST (CAST(\"{col_name}\" AS TIMESTAMP) AS VARCHAR({row['Max Length']})) AS \"{col_name}\", "
+            elif col_type in ('TS', 'SZ', 'MI', 'DH', 'DM', 'DS', 'DY', 'HM', 'HS', 'TZ'):
                 select_query += f"CAST (\"{col_name}\" AS VARCHAR({row['Max Length']})) AS \"{col_name}\", "
             elif col_type in ('AT',):
-                select_query += f"CAST (\"{col_name}\" AS VARCHAR(32)) AS \"{col_name}\", "
+                if col_format == 'HH:MI:SST':
+                    select_query += f"CAST (CAST( \"{col_name}\" AS TIME) AS VARCHAR(32)) AS \"{col_name}\", "
+                else:
+                    select_query += f"CAST (\"{col_name}\" AS VARCHAR(32)) AS \"{col_name}\", "
             elif col_type in ('DA',):
                 select_query += f"CAST (CAST (\"{col_name}\" AS DATE format 'YYYY-MM-DD') AS VARCHAR(10))  AS \"{col_name}\", "
             elif col_type in ('CF', 'CO'):

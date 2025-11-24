@@ -91,7 +91,8 @@ def define_priority_view(p_queue: PriorityQueue) -> None:
                 (unix_timestamp(current_timestamp()) - 
                 unix_timestamp(q.event_time)) 
                 / 60) AS staleness_m,
-            (CASE WHEN staleness_m < d.min_staleness THEN 0                 
+            (CASE WHEN staleness_m < d.min_staleness THEN 0
+                  WHEN max_staleness IS NULL THEN 1                 
                   WHEN (max_staleness - staleness_m) > 60 THEN 1              
                   WHEN (max_staleness - staleness_m) > 45 THEN 2             
                   WHEN (max_staleness - staleness_m) > 30 THEN 3             
@@ -107,7 +108,7 @@ def define_priority_view(p_queue: PriorityQueue) -> None:
                   ELSE 25                
             END) * q.priority as priority
             FROM {p_queue.queue_tbl} q
-            JOIN {demographic_table} d 
+            LEFT JOIN {demographic_table} d 
             ON q.source_table = d.source_table
         ) sub
         WHERE status = 'Q'
